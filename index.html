@@ -233,6 +233,13 @@
     </div>
   </div>
 
+  <!-- Next page button -->
+  <div style="display:flex;justify-content:flex-end;padding-bottom:32px">
+    <button class="btn btn-primary" onclick="switchPage('page2', document.querySelectorAll('.tab')[1])">
+      Costs &amp; Summary →
+    </button>
+  </div>
+
 </div><!-- /container -->
 </div><!-- /page1 -->
 
@@ -417,11 +424,11 @@
   <div class="card">
     <div class="card-title" onclick="tog('summC',this)">Pricing &amp; Summary <span class="tog">▾</span></div>
     <div class="collapsible" id="summC">
-      <div class="cost-grid" style="max-width:500px;margin-bottom:18px">
+      <div class="cost-grid" style="max-width:500px;margin-bottom:20px">
         <div class="field"><label>Desired Margin % (Product)</label><input type="number" id="desiredMargin" value="30" step="0.5" min="0"></div>
         <div class="field"><label>Price Override ($, 0 = auto)</label><input type="number" id="desiredPrice" value="0" step="1000" min="0"></div>
       </div>
-      <div class="summary-grid" id="summaryGrid"></div>
+      <div id="summaryGrid"></div>
     </div>
   </div>
 
@@ -849,11 +856,11 @@ function calcSummary() {
   const priceOverride = gv('desiredPrice');
   const subtotal = priceOverride > 0 ? priceOverride : (desiredMargin<1 ? totalCosts/(1-desiredMargin) : totalCosts);
 
-  const findersPct = gv('commFinders')/100;
-  const salesPct   = gv('commSales')/100;
-  const otherCommPct=gv('commOther')/100;
-  const taxPct     = gv('commTax')/100;
-  const discPct    = gv('commDisc')/100;
+  const findersPct  = gv('commFinders')/100;
+  const salesPct    = gv('commSales')/100;
+  const otherCommPct= gv('commOther')/100;
+  const taxPct      = gv('commTax')/100;
+  const discPct     = gv('commDisc')/100;
 
   const finders  = subtotal*findersPct;
   const salesC   = subtotal*salesPct;
@@ -870,22 +877,64 @@ function calcSummary() {
   const netMargin   = sellPrice>0?netProfit/sellPrice:0;
   const t = getTotals();
 
+  // ── Financial statement table ──────────────────────────────────────────────
+  function row(label, amount, opts={}) {
+    const {bold=false, indent=false, separator=false, highlight=false, positive=null} = opts;
+    if (separator) return `<tr><td colspan="3" style="padding:2px 0;border:none"><div style="height:1px;background:var(--border);margin:4px 0"></div></td></tr>`;
+    const labelStyle = `font-size:13px;${bold?'font-weight:700;':''}${indent?'padding-left:20px;color:var(--muted);':''}`;
+    const pct = sellPrice>0&&amount!==null ? (amount/sellPrice*100).toFixed(1)+'%' : '';
+    const amtColor = positive===null ? '' : (amount>=0 ? 'color:var(--success)' : 'color:var(--danger)');
+    const bgStyle = highlight ? 'background:var(--surface2);' : '';
+    return `<tr style="${bgStyle}">
+      <td style="${labelStyle}padding:7px 12px;border-bottom:1px solid var(--border)">${label}</td>
+      <td style="text-align:right;font-family:'DM Mono',monospace;font-size:13px;${bold?'font-weight:700;':''}${amtColor};padding:7px 12px;border-bottom:1px solid var(--border)">
+        ${amount!==null ? '$'+fmt(amount) : ''}
+      </td>
+      <td style="text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted2);padding:7px 12px;border-bottom:1px solid var(--border)">
+        ${pct}
+      </td>
+    </tr>`;
+  }
+
+  const perPanel = t.panels>0 ? ` <span style="font-size:11px;color:var(--muted);font-weight:400">($${fmt(sellPrice/t.panels)}/panel${t.area>0?' · $'+fmt(sellPrice/t.area)+'/SF':''})</span>` : '';
+  const costsPerPanel = t.panels>0 ? ` <span style="font-size:11px;color:var(--muted);font-weight:400">($${fmt(totalCosts/t.panels)}/panel)</span>` : '';
+
   document.getElementById('summaryGrid').innerHTML = `
-    <div class="sm"><div class="lbl">Total Costs</div><div class="val">$${fmtK(totalCosts)}</div></div>
-    <div class="sm"><div class="lbl">Sell Price</div><div class="val">$${fmtK(sellPrice)}</div></div>
-    <div class="sm"><div class="lbl">Gross Profit</div><div class="val ${grossProfit>=0?'profit-pos':'profit-neg'}">$${fmtK(grossProfit)}</div><div class="sub">Margin: ${(grossMargin*100).toFixed(1)}%</div></div>
-    <div class="sm"><div class="lbl">Net Profit</div><div class="val ${netProfit>=0?'profit-pos':'profit-neg'}">$${fmtK(netProfit)}</div><div class="sub">Margin: ${(netMargin*100).toFixed(1)}%</div></div>
-    ${t.panels>0?`
-    <div class="sm"><div class="lbl">Price / Panel</div><div class="val">$${fmt(sellPrice/t.panels)}</div></div>
-    <div class="sm"><div class="lbl">Price / SF</div><div class="val">$${fmt(t.area>0?sellPrice/t.area:0)}</div></div>`:''}
-    <div class="sm"><div class="lbl">Materials</div><div class="val">$${fmtK(mat)}</div></div>
-    <div class="sm"><div class="lbl">Fabrication</div><div class="val">$${fmtK(fab)}</div></div>
-    <div class="sm"><div class="lbl">Installation</div><div class="val">$${fmtK(inst)}</div></div>
-    <div class="sm"><div class="lbl">Shipping</div><div class="val">$${fmtK(ship)}</div></div>
-    <div class="sm"><div class="lbl">Equipment</div><div class="val">$${fmtK(equip)}</div></div>
-    <div class="sm"><div class="lbl">Travel</div><div class="val">$${fmtK(travel)}</div></div>
-    <div class="sm"><div class="lbl">Other</div><div class="val">$${fmtK(other)}</div></div>
-  `;
+    <table style="width:100%;border-collapse:collapse;max-width:680px">
+      <thead>
+        <tr style="background:var(--surface2)">
+          <th style="text-align:left;padding:9px 12px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--border)">Line Item</th>
+          <th style="text-align:right;padding:9px 12px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--border)">Amount</th>
+          <th style="text-align:right;padding:9px 12px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--border)">% of Sell</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${row('COST OF GOODS SOLD', null, {bold:true})}
+        ${row('Materials', mat, {indent:true})}
+        ${row('Fabrication', fab, {indent:true})}
+        ${row('Installation', inst, {indent:true})}
+        ${row('Shipping', ship, {indent:true})}
+        ${row('Equipment', equip, {indent:true})}
+        ${row('Travel', travel, {indent:true})}
+        ${row('Other Charges', other, {indent:true})}
+        ${row('Total Costs'+costsPerPanel, totalCosts, {bold:true, highlight:true})}
+        ${row('', null, {separator:true})}
+        ${row('REVENUE', null, {bold:true})}
+        ${row('Sell Price'+perPanel, sellPrice, {bold:true, highlight:true})}
+        ${row('', null, {separator:true})}
+        ${row('GROSS PROFIT', null, {bold:true})}
+        ${row('Gross Profit ('+((grossMargin*100).toFixed(1))+'%)', grossProfit, {bold:true, highlight:true, positive:true})}
+        ${row('', null, {separator:true})}
+        ${row('DEDUCTIONS', null, {bold:true})}
+        ${finders>0  ? row("Finder's Fee / Lead Gen", -finders, {indent:true}) : ''}
+        ${salesC>0   ? row('Sales Commission', -salesC, {indent:true}) : ''}
+        ${otherC>0   ? row('Other Commissions', -otherC, {indent:true}) : ''}
+        ${disc>0     ? row('Discount', -disc, {indent:true}) : ''}
+        ${row('', null, {separator:true})}
+        ${row('NET PROFIT', null, {bold:true})}
+        ${row('Net Profit ('+((netMargin*100).toFixed(1))+'%)', netProfit, {bold:true, highlight:true, positive:true})}
+      </tbody>
+    </table>`;
 }
 
 function calcAll() { calcSummary(); }
