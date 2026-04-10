@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INOVUES Estimator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg:        #0f1117;
+    --surface:   #181c27;
+    --surface2:  #1e2333;
+    --border:    #2a3045;
+    --accent:    #3d7fff;
+    --accent2:   #5b9bff;
+    --success:   #2ecc71;
+    --warning:   #f39c12;
+    --danger:    #e74c3c;
+    --text:      #e8eaf0;
+    --muted:     #7a8299;
+    --yellow:    #f5c842;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: 56px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo {
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.04em;
+    color: var(--accent2);
+    text-transform: uppercase;
+  }
+  .logo span { color: var(--muted); font-weight: 400; }
+  .phase-badge {
+    background: var(--accent);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── Layout ── */
+  .container { max-width: 1400px; margin: 0 auto; padding: 28px 32px; }
+
+  /* ── Section ── */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+  }
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── Project Info Grid ── */
+  .info-grid {
+    display: grid;
+    grid-template-columns: 2.5fr 1.5fr 1fr 1fr 1fr;
+    gap: 12px;
+  }
+
+  /* ── Form controls ── */
+  label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; font-weight: 500; letter-spacing: 0.04em; }
+  input[type="text"], input[type="date"], input[type="number"], select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 7px 10px;
+    font-family: inherit;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  input[type="number"] { font-family: 'DM Mono', monospace; }
+  select { cursor: pointer; }
+  select option { background: var(--surface2); }
+
+  /* ── TKO toolbar ── */
+  .tko-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: var(--surface2); border-color: var(--accent); color: var(--accent2); }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-success:hover { opacity: 0.9; }
+  .btn-danger-ghost { background: transparent; color: var(--danger); border: 1px solid transparent; padding: 4px 7px; border-radius: 5px; font-size: 13px; cursor: pointer; }
+  .btn-danger-ghost:hover { background: rgba(231,76,60,0.12); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+  /* ── TKO Table ── */
+  .tko-scroll { overflow-x: auto; }
+  table.tko {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    min-width: 1050px;
+  }
+  table.tko th {
+    background: var(--surface2);
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 8px 8px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  table.tko th:first-child { text-align: left; padding-left: 12px; }
+  table.tko td {
+    padding: 5px 4px;
+    border-bottom: 1px solid rgba(42,48,69,0.5);
+    vertical-align: middle;
+  }
+  table.tko tr:hover td { background: rgba(61,127,255,0.04); }
+  table.tko td input, table.tko td select {
+    padding: 5px 7px;
+    font-size: 12px;
+    text-align: center;
+  }
+  table.tko td input[type="text"] { text-align: left; }
+  table.tko td.num input { font-family: 'DM Mono', monospace; }
+  .row-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    padding-left: 12px;
+    width: 28px;
+  }
+
+  /* Checkbox styling */
+  input[type="checkbox"] {
+    width: 15px; height: 15px;
+    cursor: pointer;
+    accent-color: var(--accent);
+  }
+  .cb-cell { text-align: center; }
+
+  /* ── Summary metrics ── */
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .metric {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .metric-label { font-size: 11px; color: var(--muted); font-weight: 500; letter-spacing: 0.04em; margin-bottom: 4px; }
+  .metric-value { font-size: 22px; font-weight: 700; font-family: 'DM Mono', monospace; color: var(--accent2); }
+  .metric-unit { font-size: 12px; color: var(--muted); margin-top: 1px; }
+
+  /* ── Results table ── */
+  table.results {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+  table.results th {
+    background: var(--surface2);
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 9px 10px;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  table.results th:first-child,
+  table.results th:nth-child(2),
+  table.results th:nth-child(3) { text-align: left; }
+  table.results td {
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(42,48,69,0.5);
+    text-align: right;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+  }
+  table.results td:first-child,
+  table.results td:nth-child(2),
+  table.results td:nth-child(3) {
+    text-align: left;
+    font-family: 'DM Sans', sans-serif;
+  }
+  table.results td:first-child { font-weight: 500; color: var(--text); }
+  table.results td:nth-child(2) { color: var(--muted); font-size: 11px; }
+  table.results td:nth-child(3) { color: var(--muted); font-size: 11px; font-family: 'DM Mono', monospace; }
+  table.results tr:hover td { background: rgba(61,127,255,0.04); }
+  .tfoot-row td {
+    background: var(--surface2);
+    font-weight: 700;
+    color: var(--accent2) !important;
+    border-top: 1px solid var(--border);
+    font-family: 'DM Mono', monospace !important;
+    font-size: 13px !important;
+  }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 18px;
+    font-size: 13px;
+    display: none;
+    gap: 8px;
+    align-items: center;
+    z-index: 999;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .toast.show { display: flex; animation: slideUp 0.2s ease; }
+  .toast.success { border-color: var(--success); color: var(--success); }
+  .toast.error   { border-color: var(--danger);  color: var(--danger);  }
+  @keyframes slideUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+  /* ── Hidden file input ── */
+  #fileInput { display: none; }
+
+  /* ── Info banner ── */
+  .banner {
+    background: rgba(61,127,255,0.1);
+    border: 1px solid rgba(61,127,255,0.25);
+    border-radius: 7px;
+    padding: 10px 14px;
+    font-size: 12.5px;
+    color: var(--accent2);
+    margin-top: 16px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">INOVUES <span>/ Estimator</span></div>
+  <div class="phase-badge">PHASE 1–2</div>
+</header>
+
+<div class="container">
+
+  <!-- Project Info -->
+  <div class="section">
+    <div class="section-title">Project Info</div>
+    <div class="info-grid">
+      <div><label>Project Name</label><input type="text" id="projectName"></div>
+      <div><label>Customer</label><input type="text" id="customer"></div>
+      <div><label>Estimate Date</label><input type="date" id="estDate"></div>
+      <div><label>Estimated By</label><input type="text" id="estBy"></div>
+      <div><label>Reviewed By</label><input type="text" id="reviewedBy"></div>
+    </div>
+  </div>
+
+  <!-- TKO -->
+  <div class="section">
+    <div class="section-title">Window Takeoff (TKO)</div>
+
+    <div class="tko-toolbar">
+      <button class="btn btn-ghost btn-sm" onclick="addRow()">＋ Add Row</button>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('fileInput').click()">📂 Import Excel</button>
+      <button class="btn btn-ghost btn-sm" onclick="downloadTemplate()">⬇ TKO Template</button>
+      <input type="file" id="fileInput" accept=".xlsx" onchange="importExcel(event)">
+    </div>
+
+    <div class="tko-scroll">
+      <table class="tko" id="tkoTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th style="text-align:left">Item Name</th>
+            <th>Width (in)</th>
+            <th>Height (in)</th>
+            <th>Qty</th>
+            <th>System</th>
+            <th>Finish</th>
+            <th>Color</th>
+            <th>Mount</th>
+            <th>Head Ret.</th>
+            <th>Sill Ret.</th>
+            <th>Jamb Sp.</th>
+            <th>Glazing</th>
+            <th>$/SF</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tkoBody"></tbody>
+      </table>
+    </div>
+
+    <div id="summaryArea"></div>
+  </div>
+
+  <!-- Calculate button -->
+  <div style="display:flex;gap:12px;margin-bottom:20px">
+    <button class="btn btn-primary" onclick="calculate()" id="calcBtn">▶ Calculate Materials</button>
+  </div>
+
+  <!-- Results -->
+  <div class="section" id="resultsSection" style="display:none">
+    <div class="section-title">Material Requirements</div>
+    <div style="overflow-x:auto">
+      <table class="results" id="resultsTable"></table>
+    </div>
+    <div class="metrics" id="costMetrics"></div>
+    <div class="banner" id="phase3Banner">✅ Materials calculated. Phase 3 — Odoo Inventory Check coming next.</div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+let rows = [];
+let rowId = 0;
+
+const SYSTEMS  = ['SWR','IGR','SWR-IG','SWR-VIG'];
+const FINISHES = ['Painted','Clear Anodized','Black Anodized','Mill Finish'];
+const COLORS   = ['Light','Dark','Custom'];
+const MOUNTS   = ['Overlap-mount','Inset-mount'];
+const GLAZINGS = ['VIG','IG','Monolithic'];
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+document.getElementById('estDate').value = new Date().toISOString().split('T')[0];
+addRow();
+
+// ─── Row management ──────────────────────────────────────────────────────────
+function newRow() {
+  const last = rows[rows.length - 1] || {};
+  return {
+    id: rowId++,
+    item: '', width: '', height: '', qty: '',
+    system: last.system || 'SWR',
+    finish: last.finish || 'Painted',
+    color:  last.color  || 'Light',
+    mount:  last.mount  || 'Overlap-mount',
+    headRet: last.headRet !== undefined ? last.headRet : true,
+    sillRet: last.sillRet !== undefined ? last.sillRet : true,
+    jambSp:  last.jambSp  !== undefined ? last.jambSp  : false,
+    glazing: last.glazing || 'VIG',
+    glazPrice: last.glazPrice !== undefined ? last.glazPrice : 20,
+  };
+}
+
+function addRow(data) {
+  const r = data || newRow();
+  rows.push(r);
+  renderTable();
+}
+
+function removeRow(id) {
+  if (rows.length <= 1) return;
+  rows = rows.filter(r => r.id !== id);
+  renderTable();
+}
+
+function sel(options, val) {
+  return `<select>${options.map(o => `<option${o===val?' selected':''}>${o}</option>`).join('')}</select>`;
+}
+
+function renderTable() {
+  const tbody = document.getElementById('tkoBody');
+  tbody.innerHTML = rows.map((r, i) => `
+    <tr data-id="${r.id}">
+      <td class="row-num">${i+1}</td>
+      <td><input type="text" value="${r.item}" oninput="update(${r.id},'item',this.value)" style="min-width:90px"></td>
+      <td class="num"><input type="number" value="${r.width}" step="0.25" min="0" oninput="update(${r.id},'width',this.value)" style="width:70px"></td>
+      <td class="num"><input type="number" value="${r.height}" step="0.25" min="0" oninput="update(${r.id},'height',this.value)" style="width:70px"></td>
+      <td class="num"><input type="number" value="${r.qty}" step="1" min="0" oninput="update(${r.id},'qty',this.value)" style="width:55px"></td>
+      <td>${selFor(r.id,'system',SYSTEMS,r.system)}</td>
+      <td>${selFor(r.id,'finish',FINISHES,r.finish)}</td>
+      <td>${selFor(r.id,'color',COLORS,r.color)}</td>
+      <td>${selFor(r.id,'mount',MOUNTS,r.mount)}</td>
+      <td class="cb-cell"><input type="checkbox" ${r.headRet?'checked':''} onchange="update(${r.id},'headRet',this.checked)"></td>
+      <td class="cb-cell"><input type="checkbox" ${r.sillRet?'checked':''} onchange="update(${r.id},'sillRet',this.checked)"></td>
+      <td class="cb-cell"><input type="checkbox" ${r.jambSp?'checked':''} onchange="update(${r.id},'jambSp',this.checked)"></td>
+      <td>${selFor(r.id,'glazing',GLAZINGS,r.glazing)}</td>
+      <td class="num"><input type="number" value="${r.glazPrice}" step="0.5" min="0" oninput="update(${r.id},'glazPrice',this.value)" style="width:55px"></td>
+      <td><button class="btn-danger-ghost" onclick="removeRow(${r.id})">✕</button></td>
+    </tr>`).join('');
+  renderSummary();
+}
+
+function selFor(id, field, options, val) {
+  return `<select onchange="update(${id},'${field}',this.value)">${options.map(o=>`<option${o===val?' selected':''}>${o}</option>`).join('')}</select>`;
+}
+
+function update(id, field, val) {
+  const r = rows.find(r => r.id === id);
+  if (!r) return;
+  if (['width','height','glazPrice'].includes(field)) r[field] = parseFloat(val)||0;
+  else if (field === 'qty') r[field] = parseInt(val)||0;
+  else if (typeof r[field] === 'boolean') r[field] = val;
+  else r[field] = val;
+  renderSummary();
+}
+
+// ─── Summary ─────────────────────────────────────────────────────────────────
+function renderSummary() {
+  const valid = rows.filter(r => r.qty > 0 && r.width > 0 && r.height > 0);
+  const area  = valid.reduce((s,r) => s + (r.width/12)*(r.height/12)*r.qty, 0);
+  const panels = valid.reduce((s,r) => s + r.qty, 0);
+
+  document.getElementById('summaryArea').innerHTML = panels === 0 ? '' : `
+    <div class="metrics">
+      <div class="metric"><div class="metric-label">Total Panels</div><div class="metric-value">${panels}</div><div class="metric-unit">panels</div></div>
+      <div class="metric"><div class="metric-label">Total Area</div><div class="metric-value">${area.toFixed(0)}</div><div class="metric-unit">ft²</div></div>
+      <div class="metric"><div class="metric-label">Avg Area / Panel</div><div class="metric-value">${(area/panels).toFixed(2)}</div><div class="metric-unit">ft² / panel</div></div>
+      <div class="metric"><div class="metric-label">Window Types</div><div class="metric-value">${valid.length}</div><div class="metric-unit">types</div></div>
+    </div>`;
+}
+
+// ─── EST-1 Calculation Engine ─────────────────────────────────────────────────
+function computeTotals() {
+  const valid = rows.filter(r => r.qty > 0 && r.width > 0 && r.height > 0);
+  let panels=0, area=0, perimH=0, perimV=0, headFt=0, sillFt=0, jambFt=0, dlJambs=0, spJambs=0, corners=0, setblks=0;
+  const DUAL_PER_JAMB=3, SP_PER_JAMB=3;
+  for (const r of valid) {
+    const w=r.width/12, h=r.height/12, q=r.qty;
+    panels  += q;
+    area    += w*h*q;
+    perimH  += 2*w*q;
+    perimV  += 2*h*q;
+    if (r.headRet) headFt += w*q;
+    if (r.sillRet) sillFt += w*q;
+    jambFt  += 2*h*q;
+    dlJambs += 2*q*DUAL_PER_JAMB;
+    if (r.jambSp) spJambs += 2*q*SP_PER_JAMB;
+    corners += 4*q;
+    setblks += Math.ceil(2.3*q);
+  }
+  return {panels, area, perimH, perimV, perim: perimH+perimV, headFt, sillFt, jambFt, dlJambs, spJambs, corners, setblks};
+}
+
+function calcPurchaseQty(demand, yieldQty, utilization) {
+  if (!demand || !yieldQty || !utilization) return 0;
+  return Math.ceil(demand / (yieldQty * utilization));
+}
+
+function getMaterials(t) {
+  const lines = [];
+  function add(name, ref, supplier, cost, costUnit, yieldQty, yieldUnit, util, shipPct, demand) {
+    if (demand <= 0) return;
+    const pqty = calcPurchaseQty(demand, yieldQty, util);
+    const matCost  = pqty * cost;
+    const shipCost = matCost * shipPct;
+    lines.push({ name, ref, supplier, cost, costUnit, yieldQty, yieldUnit, util,
+                 demand: Math.round(demand*100)/100, demandUnit: yieldUnit,
+                 purchaseQty: pqty, matCost, shipCost, totalCost: matCost+shipCost });
+  }
+
+  // Glazing
+  add('Glazing (VIG/IG/Mono)', 'INOV-232', 'LuxWall', 20, 'ft²', 1, 'ft²', 1.0, 0.0, t.area);
+  // Aluminum SWR-VIG 03310 MF
+  add('Alum SWR-VIG Profile 03310 Mill Finish', '03004CA (03310CA)', 'Republic Extrusions', 30, 'ft', 16, 'ft/stick', 0.8, 0.05, t.perim);
+  // Glazing Spline 8mm (VIG)
+  add('SWR-VIG Glazing Spline 8mm Black (Orazen 4194)', '4194-01-00', 'Orazen', 0.43, 'ft', 1, 'ft/ft', 0.9, 0.1, t.perim);
+  // Jamb Gasket Gray
+  add('Jamb Gasket Gray (Orazen 4172-02-01)', '4172-02-01', 'Orazen', 0.41, 'ft', 1, 'ft/ft', 0.952, 0.1, t.jambFt);
+  // Corner Keys
+  add('Corner Keys 46-124 VIG SWR (Strybuc)', '46-124', 'Strybuc', 0.39, 'key', 1, 'keys', 0.9, 0.02, t.corners);
+  // Dual Lock
+  add('3M Dual Lock ½" SJ3550CF', 'SJ3550CF', 'Fastenation', 584, 'roll', 1800, 'pieces/roll', 0.9, 0.05, t.dlJambs);
+  // Foam baffles
+  add('48PPI Foam Baffle ¼"×½" (head)', 'INOV-201', 'Merryweather', 4.41, 'roll', 9, 'ft/roll', 0.8, 0.05, t.perimH/2);
+  add('48PPI Foam Baffle ½"×½" (sill)', 'INOV-201', 'Merryweather', 4.86, 'roll', 9, 'ft/roll', 0.8, 0.05, t.perimH/2);
+  // Head / Sill Retainer
+  if (t.headFt > 0) add('Head Retainer (CRL)', '20189', 'CRL', 30.8, 'stick', 10, 'ft/stick', 0.875, 0.05, t.headFt);
+  if (t.sillFt > 0) add('Sill Retainer (CRL)', '20189', 'CRL', 30.8, 'stick', 10, 'ft/stick', 0.875, 0.05, t.sillFt);
+  // AFTC tape
+  if (t.headFt > 0) add('AFTC 1" Tape — Head Retainer', 'INOV-159', 'AFTC', 38, 'roll', 54, 'ft/roll', 0.909, 0.05, t.headFt);
+  if (t.sillFt > 0) add('AFTC 1" Tape — Sill Retainer', 'INOV-159', 'AFTC', 38, 'roll', 54, 'ft/roll', 0.909, 0.05, t.sillFt);
+  // Setting Blocks
+  add('Gray Silicone Setting Blocks (Orazen 4173)', '4173-01-02', 'Orazen', 0.54, 'unit', 1, 'units', 0.85, 0.1, t.setblks);
+  // Special Jamb Spacers
+  if (t.spJambs > 0) {
+    add('Special Jamb Spacers U-Channel (CRL)', 'WU3SASL', 'CRL', 30.8, 'stick', 10, 'ft/stick', 0.875, 0.05, t.spJambs);
+    add('AFTC ½" for Jamb Spacers', 'INOV-159', 'AFTC', 20, 'roll', 54, 'ft/roll', 0.909, 0.05, t.spJambs);
+  }
+  // Glass protection film
+  add('Glass Protection Film 48"×990\' (Nitto Blue)', '5057A5', 'Protective Films', 484.54, 'roll', 990, 'ft/roll', 0.9, 0.05, t.area/4);
+  // Shipping pads
+  add('CRL Super Duty Shipping Pads (2700/box)', 'NSP121515', 'CRL', 324.99, 'box', 2700, 'pads/box', 0.952, 0.05, t.panels*8);
+  // Desiccant bags
+  add('Desiccant Bags Uline S22299 (1000/box)', 'INOV-265', 'Uline', 260.23, 'box', 1000, 'bags/box', 0.9, 0.05, t.panels);
+  // Masking tape
+  add("Painter's Masking Tape 1\"×60yd", 'S-13752', 'Uline', 3.3, 'roll', 180, 'ft/roll', 0.909, 0.05, t.perim);
+
+  return lines;
+}
+
+// ─── Calculate ───────────────────────────────────────────────────────────────
+function calculate() {
+  const valid = rows.filter(r => r.qty > 0 && r.width > 0 && r.height > 0);
+  if (!valid.length) { toast('Enter at least one window type with dimensions and qty.', 'error'); return; }
+
+  const totals   = computeTotals();
+  const materials = getMaterials(totals);
+
+  // Render results table
+  const thead = `<thead><tr>
+    <th>Material</th><th>Supplier</th><th>Odoo Ref</th>
+    <th>Demand</th><th>Unit</th>
+    <th>Buy Qty</th><th>Buy Unit</th>
+    <th>Mat Cost</th><th>Ship Cost</th><th>Total Cost</th>
+  </tr></thead>`;
+
+  const tbody = '<tbody>' + materials.map(m => `<tr>
+    <td>${m.name}</td>
+    <td>${m.supplier}</td>
+    <td>${m.ref}</td>
+    <td>${fmt(m.demand)}</td>
+    <td>${m.demandUnit}</td>
+    <td>${m.purchaseQty}</td>
+    <td>${m.costUnit}</td>
+    <td>$${fmt(m.matCost)}</td>
+    <td>$${fmt(m.shipCost)}</td>
+    <td>$${fmt(m.totalCost)}</td>
+  </tr>`).join('') + '</tbody>';
+
+  const totalMat  = materials.reduce((s,m) => s+m.matCost, 0);
+  const totalShip = materials.reduce((s,m) => s+m.shipCost, 0);
+  const totalAll  = materials.reduce((s,m) => s+m.totalCost, 0);
+
+  const tfoot = `<tfoot><tr class="tfoot-row">
+    <td colspan="7"><strong>TOTAL</strong></td>
+    <td>$${fmt(totalMat)}</td>
+    <td>$${fmt(totalShip)}</td>
+    <td>$${fmt(totalAll)}</td>
+  </tr></tfoot>`;
+
+  document.getElementById('resultsTable').innerHTML = thead + tbody + tfoot;
+
+  document.getElementById('costMetrics').innerHTML = `
+    <div class="metric"><div class="metric-label">Material Cost</div><div class="metric-value">$${fmtK(totalMat)}</div><div class="metric-unit">before shipping</div></div>
+    <div class="metric"><div class="metric-label">Shipping Est.</div><div class="metric-value">$${fmtK(totalShip)}</div><div class="metric-unit">estimated</div></div>
+    <div class="metric"><div class="metric-label">Total Cost</div><div class="metric-value">$${fmtK(totalAll)}</div><div class="metric-unit">materials + shipping</div></div>
+    <div class="metric"><div class="metric-label">Cost / Panel</div><div class="metric-value">$${fmt(totalAll/totals.panels)}</div><div class="metric-unit">per panel</div></div>
+    <div class="metric"><div class="metric-label">Cost / SF</div><div class="metric-value">$${fmt(totalAll/totals.area)}</div><div class="metric-unit">per ft²</div></div>`;
+
+  document.getElementById('resultsSection').style.display = 'block';
+  document.getElementById('resultsSection').scrollIntoView({behavior:'smooth', block:'start'});
+  toast(`Calculated ${materials.length} materials for ${totals.panels} panels.`, 'success');
+}
+
+// ─── Excel Import ─────────────────────────────────────────────────────────────
+function importExcel(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'array'});
+      const ws = wb.Sheets['TKO'];
+      if (!ws) { toast('Sheet "TKO" not found. Use the INOVUES template.', 'error'); return; }
+
+      // Read from row 3 (header), skip row 4 (hints), data from row 5
+      const data = XLSX.utils.sheet_to_json(ws, {range: 2, defval: ''});
+      // Remove hint row (first row after header)
+      const cleaned = data.filter((r, i) => i > 0);
+
+      const imported = [];
+      for (const r of cleaned) {
+        const w = parseFloat(r['Width (in)']);
+        const h = parseFloat(r['Height (in)']);
+        const q = parseInt(r['Qty']);
+        if (!w || !h || !q || q <= 0) continue;
+        imported.push({
+          id: rowId++,
+          item:      String(r['Item Name'] || r['Item #'] || '').trim(),
+          width:     w, height: h, qty: q,
+          system:    String(r['System Type'] || 'SWR'),
+          finish:    String(r['Finish'] || 'Painted'),
+          color:     String(r['Color'] || 'Light'),
+          mount:     String(r['Mount Type'] || 'Overlap-mount'),
+          headRet:   String(r['Head Retainer']).toLowerCase() === 'yes',
+          sillRet:   String(r['Sill Retainer']).toLowerCase() === 'yes',
+          jambSp:    String(r['Jamb Spacers']).toLowerCase()  === 'yes',
+          glazing:   String(r['Glazing Type'] || 'VIG'),
+          glazPrice: parseFloat(r['Glazing $/SF']) || 20,
+        });
+      }
+
+      if (!imported.length) { toast('No valid rows found. Check your file format.', 'error'); return; }
+      rows = imported;
+      renderTable();
+      toast(`Imported ${imported.length} window type(s).`, 'success');
+    } catch(err) {
+      toast('Import failed: ' + err.message, 'error');
+    }
+    event.target.value = '';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ─── Template Download ────────────────────────────────────────────────────────
+function downloadTemplate() {
+  const wb = XLSX.utils.book_new();
+  const wsData = [
+    ['INOVUES — Window Takeoff Template (TKO)'],
+    ['Fill in one row per window type. Yellow cells = required inputs. Upload this file to the INOVUES Estimator app.'],
+    ['Item #','Item Name','Width (in)','Height (in)','Qty','System Type','Finish','Color','Mount Type','Head Retainer','Sill Retainer','Jamb Spacers','Glazing Type','Glazing $/SF'],
+    ['e.g. 1','e.g. SWR-A1','e.g. 18.25','e.g. 70','e.g. 180','SWR/IGR/SWR-IG/SWR-VIG','Painted/Clear Anodized/Black Anodized/Mill Finish','Light/Dark/Custom','Overlap-mount/Inset-mount','yes/no','yes/no','yes/no','VIG/IG/Monolithic','e.g. 20'],
+    [1,'SWR-A1',18.25,70,180,'SWR','Painted','Light','Overlap-mount','yes','yes','yes','VIG',20],
+    [2,'SWR-A2',40.625,70,90,'SWR','Painted','Light','Overlap-mount','yes','yes','yes','VIG',20],
+    [3,'SWR-B',41.75,70,40,'SWR','Painted','Light','Overlap-mount','yes','yes','yes','VIG',20],
+    [4,'SWR-C1',25.75,70,30,'SWR','Painted','Light','Overlap-mount','yes','yes','yes','VIG',20],
+    [5,'SWR-C2',60,70,15,'SWR','Painted','Light','Overlap-mount','yes','yes','yes','VIG',20],
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols'] = [8,14,10,10,7,14,14,10,14,12,12,12,13,10].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws, 'TKO');
+  XLSX.writeFile(wb, 'INOVUES_TKO_Template.xlsx');
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function fmt(n)  { return Number(n).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function fmtK(n) {
+  if (n >= 1000) return (n/1000).toFixed(1)+'K';
+  return fmt(n);
+}
+
+function toast(msg, type='success') {
+  const el = document.getElementById('toast');
+  el.textContent = (type==='success' ? '✓ ' : '✗ ') + msg;
+  el.className = `toast show ${type}`;
+  setTimeout(() => el.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>
