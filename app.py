@@ -68,6 +68,79 @@ st.divider()
 st.subheader("Window Takeoff (TKO)")
 st.caption("Add one row per window type. All windows of the same dimensions and specs = one row.")
 
+# ── Template download + file import ──────────────────────────────────────────
+imp_col, tmpl_col = st.columns([3, 1])
+
+with tmpl_col:
+    with open("TKO_Template.xlsx", "rb") as f:
+        st.download_button(
+            label="⬇ Download TKO Template",
+            data=f,
+            file_name="INOVUES_TKO_Template.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True
+        )
+
+with imp_col:
+    uploaded = st.file_uploader(
+        "📂 Import TKO from Excel",
+        type=["xlsx"],
+        label_visibility="collapsed",
+        help="Upload a filled-in TKO template to auto-populate the table below."
+    )
+    if uploaded:
+        try:
+            import pandas as pd
+            df_upload = pd.read_excel(uploaded, sheet_name="TKO", header=2, skiprows=[3])
+            df_upload.columns = df_upload.columns.str.strip()
+            # Normalize column names
+            col_map = {
+                "Item #": "item_num", "Item Name": "item",
+                "Width (in)": "width_in", "Height (in)": "height_in",
+                "Qty": "qty", "System Type": "system",
+                "Finish": "finish", "Color": "color",
+                "Mount Type": "mount",
+                "Head Retainer": "head_ret", "Sill Retainer": "sill_ret",
+                "Jamb Spacers": "jamb_sp",
+                "Glazing Type": "glazing_type", "Glazing $/SF": "glazing_price"
+            }
+            df_upload = df_upload.rename(columns=col_map)
+            df_upload = df_upload.dropna(subset=["width_in", "height_in", "qty"])
+            df_upload = df_upload[df_upload["qty"] > 0]
+
+            new_rows = []
+            for _, r in df_upload.iterrows():
+                def yn(val, default=True):
+                    if isinstance(val, str):
+                        return val.strip().lower() == "yes"
+                    return bool(default)
+                new_rows.append({
+                    "item":          str(r.get("item", r.get("item_num", "SWR-?"))),
+                    "width_in":      float(r.get("width_in", 0)),
+                    "height_in":     float(r.get("height_in", 0)),
+                    "qty":           int(r.get("qty", 0)),
+                    "system":        str(r.get("system", "SWR")),
+                    "finish":        str(r.get("finish", "Painted")),
+                    "color":         str(r.get("color", "Light")),
+                    "mount":         str(r.get("mount", "Overlap-mount")),
+                    "head_ret":      yn(r.get("head_ret", "yes")),
+                    "sill_ret":      yn(r.get("sill_ret", "yes")),
+                    "jamb_sp":       yn(r.get("jamb_sp", "no"), default=False),
+                    "glazing_type":  str(r.get("glazing_type", "VIG")),
+                    "glazing_price": float(r.get("glazing_price", 20)),
+                })
+
+            if new_rows:
+                st.session_state.tko_rows = new_rows
+                st.success(f"✅ Imported {len(new_rows)} window type(s) from file.")
+                st.rerun()
+            else:
+                st.warning("No valid rows found in uploaded file. Check the format.")
+        except Exception as e:
+            st.error(f"Import failed: {e}")
+
+st.divider()
+
 SYSTEM_TYPES  = ["SWR", "IGR", "SWR-IG", "SWR-VIG"]
 FINISH_TYPES  = ["Painted", "Clear Anodized", "Black Anodized", "Mill Finish"]
 COLORS        = ["Light", "Dark", "Custom"]
