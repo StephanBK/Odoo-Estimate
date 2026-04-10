@@ -7,309 +7,477 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap');
-
   :root {
-    --bg:       #f4f6f9;
-    --surface:  #ffffff;
-    --surface2: #f0f2f6;
-    --border:   #dde1eb;
-    --accent:   #1a56db;
-    --accent2:  #1e429f;
-    --success:  #057a55;
-    --danger:   #c81e1e;
-    --warning:  #92400e;
-    --text:     #111928;
-    --muted:    #6b7280;
-    --muted2:   #9ca3af;
+    --bg:#f4f6f9; --surface:#fff; --surface2:#f0f2f6; --border:#dde1eb;
+    --accent:#1a56db; --accent2:#1e429f; --success:#057a55; --danger:#c81e1e;
+    --text:#111928; --muted:#6b7280; --muted2:#9ca3af;
   }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; min-height: 100vh; }
-
-  /* Header */
-  header {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 0 32px;
-    display: flex; align-items: center; gap: 14px;
-    height: 54px; position: sticky; top: 0; z-index: 200;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-  }
-  .logo { font-weight: 700; font-size: 15px; color: var(--accent2); letter-spacing: 0.03em; }
-  .logo span { color: var(--muted); font-weight: 400; }
-  .badge { background: var(--accent); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 3px; letter-spacing: 0.06em; }
-
-  /* Layout */
-  .container { max-width: 1440px; margin: 0 auto; padding: 24px 32px; }
-
-  /* Card */
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 20px 24px;
-    margin-bottom: 18px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-  }
-  .card-title {
-    font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
-    text-transform: uppercase; color: var(--muted);
-    margin-bottom: 16px; display: flex; align-items: center; gap: 10px;
-  }
-  .card-title::after { content:''; flex:1; height:1px; background:var(--border); }
-
-  /* Form */
-  .grid-5 { display:grid; grid-template-columns:2.5fr 1.5fr 1fr 1fr 1fr; gap:12px; }
-  label { display:block; font-size:11px; color:var(--muted); margin-bottom:4px; font-weight:600; letter-spacing:0.03em; }
-  input[type="text"], input[type="date"], input[type="number"], select, textarea {
-    width:100%; background:var(--surface2); border:1px solid var(--border);
-    border-radius:6px; color:var(--text); padding:7px 10px;
-    font-family:inherit; font-size:13px; outline:none; transition:border-color .15s;
-  }
-  input:focus, select:focus { border-color:var(--accent); background:#fff; }
-  input[type="number"] { font-family:'DM Mono',monospace; }
-
-  /* Buttons */
-  .btn { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:6px; font-family:inherit; font-size:13px; font-weight:500; cursor:pointer; border:none; transition:all .15s; white-space:nowrap; }
-  .btn-primary { background:var(--accent); color:#fff; }
-  .btn-primary:hover { background:var(--accent2); }
-  .btn-ghost { background:transparent; color:var(--text); border:1px solid var(--border); }
-  .btn-ghost:hover { border-color:var(--accent); color:var(--accent); background:#eff6ff; }
-  .btn-sm { padding:5px 10px; font-size:12px; }
-  .btn-del { background:transparent; border:none; color:var(--muted2); cursor:pointer; padding:3px 6px; border-radius:4px; font-size:13px; }
-  .btn-del:hover { background:#fee2e2; color:var(--danger); }
-
-  /* Toolbar */
-  .toolbar { display:flex; align-items:center; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
-
-  /* TKO table */
-  .tbl-wrap { overflow-x:auto; }
-  table.tko { width:100%; border-collapse:collapse; font-size:12.5px; min-width:1050px; }
-  table.tko th { background:var(--surface2); color:var(--muted); font-weight:700; font-size:10px; letter-spacing:0.06em; text-transform:uppercase; padding:8px; text-align:center; border-bottom:2px solid var(--border); white-space:nowrap; }
-  table.tko th:nth-child(2) { text-align:left; }
-  table.tko td { padding:4px; border-bottom:1px solid var(--border); vertical-align:middle; }
-  table.tko td input, table.tko td select { padding:5px 7px; font-size:12px; text-align:center; }
-  table.tko td:nth-child(2) input { text-align:left; }
-  table.tko tr:hover td { background:#f8faff; }
-  .rn { font-family:'DM Mono',monospace; font-size:11px; color:var(--muted2); text-align:center; width:28px; }
-  input[type="checkbox"] { width:15px; height:15px; cursor:pointer; accent-color:var(--accent); }
-  .cb { text-align:center; }
-
-  /* Summary metrics */
-  .metrics { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-top:16px; }
-  .metric { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:14px 16px; }
-  .metric-label { font-size:10px; color:var(--muted); font-weight:700; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:4px; }
-  .metric-value { font-size:24px; font-weight:700; font-family:'DM Mono',monospace; color:var(--accent); }
-  .metric-unit { font-size:11px; color:var(--muted2); margin-top:2px; }
-
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh;}
+  header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 32px;display:flex;align-items:center;gap:14px;height:54px;position:sticky;top:0;z-index:200;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+  .logo{font-weight:700;font-size:15px;color:var(--accent2);letter-spacing:.03em;}
+  .logo span{color:var(--muted);font-weight:400;}
+  .badge{background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;letter-spacing:.06em;}
+  .container{max-width:1440px;margin:0 auto;padding:24px 32px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-bottom:18px;box-shadow:0 1px 4px rgba(0,0,0,.04);}
+  .card-title{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;}
+  .card-title::after{content:'';flex:1;height:1px;background:var(--border);}
+  .card-title .toggle{margin-left:4px;font-size:13px;transition:transform .2s;}
+  .card-body.collapsed{display:none;}
+  .grid-5{display:grid;grid-template-columns:2.5fr 1.5fr 1fr 1fr 1fr;gap:12px;}
+  label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:600;letter-spacing:.03em;}
+  input[type="text"],input[type="date"],input[type="number"],select,textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:7px 10px;font-family:inherit;font-size:13px;outline:none;transition:border-color .15s;}
+  input:focus,select:focus{border-color:var(--accent);background:#fff;}
+  input[type="number"]{font-family:'DM Mono',monospace;}
+  input[type="checkbox"]{width:15px;height:15px;cursor:pointer;accent-color:var(--accent);}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .15s;white-space:nowrap;}
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-primary:hover{background:var(--accent2);}
+  .btn-ghost{background:transparent;color:var(--text);border:1px solid var(--border);}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent);background:#eff6ff;}
+  .btn-sm{padding:5px 10px;font-size:12px;}
+  .btn-del{background:transparent;border:none;color:var(--muted2);cursor:pointer;padding:3px 6px;border-radius:4px;font-size:13px;}
+  .btn-del:hover{background:#fee2e2;color:var(--danger);}
+  .toolbar{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+  .tbl-wrap{overflow-x:auto;}
+  table.tko{width:100%;border-collapse:collapse;font-size:12.5px;min-width:1050px;}
+  table.tko th{background:var(--surface2);color:var(--muted);font-weight:700;font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:8px;text-align:center;border-bottom:2px solid var(--border);white-space:nowrap;}
+  table.tko th:nth-child(2){text-align:left;}
+  table.tko td{padding:4px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  table.tko td input,table.tko td select{padding:5px 7px;font-size:12px;text-align:center;}
+  table.tko td:nth-child(2) input{text-align:left;}
+  table.tko tr:hover td{background:#f8faff;}
+  .rn{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);text-align:center;width:28px;}
+  .cb{text-align:center;}
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:16px;}
+  .metric{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;}
+  .metric-label{font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px;}
+  .metric-value{font-size:24px;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent);}
+  .metric-unit{font-size:11px;color:var(--muted2);margin-top:2px;}
   /* Material search */
-  .search-wrap { position:relative; }
-  .search-wrap input { padding-left:32px; }
-  .search-icon { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--muted2); font-size:13px; pointer-events:none; }
-  .dropdown {
-    position:absolute; top:calc(100% + 4px); left:0; right:0;
-    background:var(--surface); border:1px solid var(--border); border-radius:8px;
-    box-shadow:0 8px 24px rgba(0,0,0,0.1); z-index:500; max-height:280px; overflow-y:auto; display:none;
-  }
-  .dropdown.open { display:block; }
-  .dd-item { padding:9px 12px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); }
-  .dd-item:last-child { border-bottom:none; }
-  .dd-item:hover { background:#eff6ff; }
-  .dd-name { font-size:13px; font-weight:500; }
-  .dd-meta { font-size:11px; color:var(--muted); margin-top:1px; font-family:'DM Mono',monospace; }
-  .dd-stock { font-size:12px; font-family:'DM Mono',monospace; text-align:right; }
-  .in-stock { color:var(--success); }
-  .no-stock { color:var(--muted2); }
-  .dd-loading { padding:12px; color:var(--muted); font-size:13px; text-align:center; }
-
-  /* Materials table */
-  table.mat { width:100%; border-collapse:collapse; font-size:12.5px; }
-  table.mat th { background:var(--surface2); color:var(--muted); font-weight:700; font-size:10px; letter-spacing:0.06em; text-transform:uppercase; padding:9px 10px; border-bottom:2px solid var(--border); text-align:right; white-space:nowrap; }
-  table.mat th:nth-child(1), table.mat th:nth-child(2), table.mat th:nth-child(3) { text-align:left; }
-  table.mat td { padding:7px 10px; border-bottom:1px solid var(--border); text-align:right; font-family:'DM Mono',monospace; font-size:12px; }
-  table.mat td:nth-child(1) { text-align:left; font-family:'DM Sans',sans-serif; font-weight:500; max-width:240px; }
-  table.mat td:nth-child(2) { text-align:left; font-family:'DM Sans',sans-serif; color:var(--muted); font-size:11px; }
-  table.mat td:nth-child(3) { text-align:left; color:var(--muted); font-size:11px; }
-  table.mat tr:hover td { background:#f8faff; }
-  table.mat .edit-qty { width:70px; text-align:center; }
-  .onhand-ok { color:var(--success); font-weight:600; }
-  .onhand-lo { color:#b45309; font-weight:600; }
-  .onhand-no { color:var(--muted2); }
-  .delta-need { color:var(--danger); font-weight:700; }
-  .delta-ok { color:var(--success); }
-  .tfoot-row td { background:var(--surface2); font-weight:700; color:var(--accent2); border-top:2px solid var(--border); font-family:'DM Mono',monospace !important; font-size:13px; }
-
-  /* Margins */
-  .margin-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; }
-  .margin-item label { margin-bottom:4px; }
-  .margin-item input { text-align:center; }
-
-  /* Toast */
-  .toast { position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:11px 16px; font-size:13px; display:none; gap:8px; align-items:center; z-index:9999; box-shadow:0 6px 20px rgba(0,0,0,0.12); }
-  .toast.show { display:flex; animation:su .2s ease; }
-  .toast.success { border-color:#0e9f6e; color:var(--success); }
-  .toast.error   { border-color:#f05252; color:var(--danger); }
-  @keyframes su { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-
-  #fileInput { display:none; }
-
-  .info-bar { background:#eff6ff; border:1px solid #bfdbfe; border-radius:7px; padding:10px 14px; font-size:12.5px; color:var(--accent2); margin-top:14px; }
-
-  .section-actions { display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; }
+  .search-wrap{position:relative;}
+  .search-wrap input{padding-left:32px;}
+  .search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted2);font-size:13px;pointer-events:none;}
+  .dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.1);z-index:500;max-height:280px;overflow-y:auto;display:none;}
+  .dropdown.open{display:block;}
+  .dd-item{padding:9px 12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);}
+  .dd-item:last-child{border-bottom:none;}
+  .dd-item:hover{background:#eff6ff;}
+  .dd-name{font-size:13px;font-weight:500;}
+  .dd-meta{font-size:11px;color:var(--muted);margin-top:1px;font-family:'DM Mono',monospace;}
+  .dd-stock{font-size:12px;font-family:'DM Mono',monospace;text-align:right;}
+  .in-stock{color:var(--success);}
+  .no-stock{color:var(--muted2);}
+  .dd-loading{padding:12px;color:var(--muted);font-size:13px;text-align:center;}
+  table.mat{width:100%;border-collapse:collapse;font-size:12.5px;}
+  table.mat th{background:var(--surface2);color:var(--muted);font-weight:700;font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:9px 10px;border-bottom:2px solid var(--border);text-align:right;white-space:nowrap;}
+  table.mat th:nth-child(1),table.mat th:nth-child(2),table.mat th:nth-child(3){text-align:left;}
+  table.mat td{padding:7px 10px;border-bottom:1px solid var(--border);text-align:right;font-family:'DM Mono',monospace;font-size:12px;}
+  table.mat td:nth-child(1){text-align:left;font-family:'DM Sans',sans-serif;font-weight:500;}
+  table.mat td:nth-child(2){text-align:left;font-family:'DM Sans',sans-serif;color:var(--muted);font-size:11px;}
+  table.mat td:nth-child(3){text-align:left;color:var(--muted);font-size:11px;}
+  table.mat tr:hover td{background:#f8faff;}
+  .onhand-ok{color:var(--success);font-weight:600;}
+  .onhand-lo{color:#b45309;font-weight:600;}
+  .onhand-no{color:var(--muted2);}
+  .delta-need{color:var(--danger);font-weight:700;}
+  .delta-ok{color:var(--success);}
+  .tfoot-row td{background:var(--surface2);font-weight:700;color:var(--accent2);border-top:2px solid var(--border);font-family:'DM Mono',monospace!important;font-size:13px;}
+  /* Cost sections */
+  .cost-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;}
+  .cost-field{display:flex;flex-direction:column;gap:4px;}
+  .cost-section-total{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;margin-top:14px;}
+  .cost-section-total .lbl{font-size:12px;color:var(--muted);font-weight:600;}
+  .cost-section-total .val{font-size:16px;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent2);}
+  .line-items-table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12.5px;}
+  .line-items-table th{background:var(--surface2);color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:7px 10px;border-bottom:2px solid var(--border);text-align:left;}
+  .line-items-table th:nth-child(3),.line-items-table th:nth-child(4){text-align:right;}
+  .line-items-table td{padding:7px 10px;border-bottom:1px solid var(--border);font-size:12.5px;}
+  .line-items-table td:nth-child(3),.line-items-table td:nth-child(4){text-align:right;font-family:'DM Mono',monospace;}
+  .toggle-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+  .toggle-row label{margin:0;font-size:13px;color:var(--text);font-weight:500;}
+  /* Summary */
+  .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;}
+  .summary-metric{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;}
+  .summary-metric .lbl{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;}
+  .summary-metric .val{font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent2);}
+  .summary-metric .sub{font-size:11px;color:var(--muted2);margin-top:3px;}
+  .info-bar{background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:10px 14px;font-size:12.5px;color:var(--accent2);margin-top:14px;}
+  .section-actions{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
+  .toast{position:fixed;bottom:20px;right:20px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 16px;font-size:13px;display:none;gap:8px;align-items:center;z-index:9999;box-shadow:0 6px 20px rgba(0,0,0,.12);}
+  .toast.show{display:flex;animation:su .2s ease;}
+  .toast.success{border-color:#0e9f6e;color:var(--success);}
+  .toast.error{border-color:#f05252;color:var(--danger);}
+  @keyframes su{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  #fileInput{display:none;}
+  .divider{height:1px;background:var(--border);margin:14px 0;}
+  .small-note{font-size:11px;color:var(--muted);margin-bottom:10px;}
 </style>
 </head>
 <body>
-
 <header>
   <div class="logo">INOVUES <span>/ Estimator</span></div>
   <div class="badge">BETA</div>
 </header>
-
 <div class="container">
 
   <!-- Project Info -->
   <div class="card">
-    <div class="card-title">Project Info</div>
-    <div class="grid-5">
-      <div><label>Project Name</label><input type="text" id="projectName"></div>
-      <div><label>Customer</label><input type="text" id="customer"></div>
-      <div><label>Estimate Date</label><input type="date" id="estDate"></div>
-      <div><label>Estimated By</label><input type="text" id="estBy"></div>
-      <div><label>Reviewed By</label><input type="text" id="reviewedBy"></div>
+    <div class="card-title" onclick="toggleCard('projBody')">Project Info <span class="toggle" id="projToggle">▾</span></div>
+    <div class="card-body" id="projBody">
+      <div class="grid-5">
+        <div><label>Project Name</label><input type="text" id="projectName"></div>
+        <div><label>Customer</label><input type="text" id="customer"></div>
+        <div><label>Estimate Date</label><input type="date" id="estDate"></div>
+        <div><label>Estimated By</label><input type="text" id="estBy"></div>
+        <div><label>Reviewed By</label><input type="text" id="reviewedBy"></div>
+      </div>
     </div>
   </div>
 
   <!-- TKO -->
   <div class="card">
-    <div class="card-title">Window Takeoff (TKO)</div>
-    <div class="toolbar">
-      <button class="btn btn-ghost btn-sm" onclick="addRow()">＋ Add Row</button>
-      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('fileInput').click()">📂 Import Excel</button>
-      <button class="btn btn-ghost btn-sm" onclick="downloadTemplate()">⬇ TKO Template</button>
-      <input type="file" id="fileInput" accept=".xlsx" onchange="importExcel(event)">
-    </div>
-    <div class="tbl-wrap">
-      <table class="tko" id="tkoTable">
-        <thead><tr>
+    <div class="card-title" onclick="toggleCard('tkoBody')">Window Takeoff (TKO) <span class="toggle" id="tkoToggle">▾</span></div>
+    <div class="card-body" id="tkoBody">
+      <div class="toolbar">
+        <button class="btn btn-ghost btn-sm" onclick="addRow()">＋ Add Row</button>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('fileInput').click()">📂 Import Excel</button>
+        <button class="btn btn-ghost btn-sm" onclick="downloadTemplate()">⬇ TKO Template</button>
+        <input type="file" id="fileInput" accept=".xlsx" onchange="importExcel(event)">
+      </div>
+      <div class="tbl-wrap">
+        <table class="tko"><thead><tr>
           <th>#</th><th style="text-align:left">Item Name</th>
           <th>W (in)</th><th>H (in)</th><th>Qty</th>
           <th>System</th><th>Finish</th><th>Color</th><th>Mount</th>
           <th>Head</th><th>Sill</th><th>Jamb</th>
           <th>Glazing</th><th>$/SF</th><th></th>
         </tr></thead>
-        <tbody id="tkoBody"></tbody>
-      </table>
+        <tbody id="tkoBody2"></tbody></table>
+      </div>
+      <div id="summaryArea"></div>
     </div>
-    <div id="summaryArea"></div>
   </div>
 
   <!-- Materials -->
   <div class="card">
-    <div class="card-title">Materials</div>
-    <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px">Search and add materials from your Odoo inventory. Quantities are auto-calculated from the TKO — you can override them.</p>
-
-    <!-- Search -->
-    <div class="search-wrap" style="max-width:480px;margin-bottom:16px">
-      <span class="search-icon">🔍</span>
-      <input type="text" id="matSearch" placeholder="Search Odoo products (name or ref)…" oninput="searchProducts(this.value)" autocomplete="off">
-      <div class="dropdown" id="searchDropdown"></div>
+    <div class="card-title" onclick="toggleCard('matBody')">Materials <span class="toggle" id="matToggle">▾</span></div>
+    <div class="card-body" id="matBody">
+      <p class="small-note">Search Odoo inventory and add materials. Quantities auto-calculate from TKO and can be overridden.</p>
+      <div class="search-wrap" style="max-width:480px;margin-bottom:16px">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="matSearch" placeholder="Search products by name or ref…" oninput="searchProducts(this.value)" autocomplete="off">
+        <div class="dropdown" id="searchDropdown"></div>
+      </div>
+      <div class="tbl-wrap">
+        <table class="mat">
+          <thead><tr>
+            <th>Material</th><th>Category</th><th>Ref</th>
+            <th>Calc Qty</th><th>Override</th><th>Unit</th>
+            <th>On Hand</th><th>To Order</th>
+            <th>Unit Cost</th><th>Mat Cost</th><th>Ship%</th><th>Total</th><th></th>
+          </tr></thead>
+          <tbody id="matBody2"></tbody>
+          <tfoot id="matFoot"></tfoot>
+        </table>
+      </div>
+      <div class="info-bar" id="matInfo" style="display:none"></div>
     </div>
-
-    <!-- Materials table -->
-    <div class="tbl-wrap">
-      <table class="mat" id="matTable">
-        <thead><tr>
-          <th>Material</th><th>Supplier / Category</th><th>Odoo Ref</th>
-          <th>Calc Qty</th><th>Override Qty</th><th>Unit</th>
-          <th>On Hand</th><th>To Order</th>
-          <th>Unit Cost</th><th>Mat Cost</th><th>Ship %</th><th>Total</th>
-          <th></th>
-        </tr></thead>
-        <tbody id="matBody"></tbody>
-        <tfoot id="matFoot"></tfoot>
-      </table>
-    </div>
-
-    <div class="info-bar" id="matInfo" style="display:none"></div>
   </div>
 
-  <!-- Margins -->
+  <!-- Fabrication -->
   <div class="card">
-    <div class="card-title">Margins</div>
-    <div class="margin-grid" id="marginGrid"></div>
+    <div class="card-title" onclick="toggleCard('fabBody')">Fabrication <span class="toggle" id="fabToggle">▾</span></div>
+    <div class="card-body" id="fabBody">
+      <div class="cost-grid">
+        <div class="cost-field">
+          <label>Fabrication By</label>
+          <select id="fabBy" onchange="calcFab()">
+            <option value="MG">MG (subcontractor)</option>
+            <option value="INOVUES">INOVUES (in-house)</option>
+          </select>
+        </div>
+        <div class="cost-field">
+          <label>INOVUES Hourly Rate ($/hr)</label>
+          <input type="number" id="fabRateINOVUES" value="37.82" step="0.01" oninput="calcFab()">
+        </div>
+        <div class="cost-field">
+          <label>MG Hourly Rate ($/hr)</label>
+          <input type="number" id="fabRateMG" value="50" step="0.01" oninput="calcFab()">
+        </div>
+        <div class="cost-field">
+          <label>Lump Sum Base Rate ($/ft²)</label>
+          <input type="number" id="fabLumpSum" value="5" step="0.01" oninput="calcFab()">
+        </div>
+        <div class="cost-field">
+          <label>Fab Stations</label>
+          <input type="number" id="fabStations" value="3" step="1" min="1" oninput="calcFab()">
+        </div>
+        <div class="cost-field">
+          <label>Margin %</label>
+          <input type="number" id="fabMargin" value="0" step="0.5" min="0" oninput="calcFab()">
+        </div>
+      </div>
+      <div class="divider"></div>
+      <p class="small-note">Man-hours per panel</p>
+      <div class="cost-grid">
+        <div class="cost-field"><label>Cutting / Machining (hr/panel)</label><input type="number" id="fabHrCut" value="0.167" step="0.01" oninput="calcFab()"></div>
+        <div class="cost-field"><label>Assembly (hr/panel)</label><input type="number" id="fabHrAssembly" value="0.5" step="0.01" oninput="calcFab()"></div>
+        <div class="cost-field"><label>Cleaning / Packaging (hr/panel)</label><input type="number" id="fabHrClean" value="0.333" step="0.01" oninput="calcFab()"></div>
+      </div>
+      <div class="cost-section-total">
+        <span class="lbl">Total Fabrication Cost</span>
+        <span class="val" id="fabTotal">$0.00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Installation -->
+  <div class="card">
+    <div class="card-title" onclick="toggleCard('instBody')">Installation <span class="toggle" id="instToggle">▾</span></div>
+    <div class="card-body" id="instBody">
+      <div class="toggle-row">
+        <input type="checkbox" id="instIncluded" checked onchange="calcInst()">
+        <label for="instIncluded">Installation included in this estimate</label>
+      </div>
+      <div id="instFields">
+        <div class="cost-grid">
+          <div class="cost-field">
+            <label>Installer</label>
+            <select id="instBy" onchange="calcInst()">
+              <option value="sub">Subcontractor</option>
+              <option value="INOVUES">INOVUES (in-house)</option>
+            </select>
+          </div>
+          <div class="cost-field">
+            <label>Labor Type</label>
+            <select id="instUnion" onchange="calcInst()">
+              <option value="union">Union ($125/hr)</option>
+              <option value="nonunion">Non-Union ($100/hr)</option>
+              <option value="INOVUES">INOVUES ($37.82/hr)</option>
+            </select>
+          </div>
+          <div class="cost-field">
+            <label>Man-hrs per Unit</label>
+            <input type="number" id="instHrPerUnit" value="1.02" step="0.01" oninput="calcInst()">
+          </div>
+          <div class="cost-field">
+            <label>PM Hours (project total)</label>
+            <input type="number" id="instPMHrs" value="40" step="1" oninput="calcInst()">
+          </div>
+          <div class="cost-field">
+            <label>PM Rate ($/hr)</label>
+            <input type="number" id="instPMRate" value="85" step="1" oninput="calcInst()">
+          </div>
+          <div class="cost-field">
+            <label>Margin %</label>
+            <input type="number" id="instMargin" value="0" step="0.5" min="0" oninput="calcInst()">
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="cost-grid">
+          <div class="cost-field">
+            <div class="toggle-row" style="margin:0">
+              <input type="checkbox" id="instTakeoff" checked onchange="calcInst()">
+              <label for="instTakeoff">Window Takeoff needed</label>
+            </div>
+          </div>
+          <div class="cost-field">
+            <label>Takeoff Lump Sum ($)</label>
+            <input type="number" id="instTakeoffAmt" value="1955" step="50" oninput="calcInst()">
+          </div>
+          <div class="cost-field">
+            <label>Lump Sum Override ($, 0 = use rates)</label>
+            <input type="number" id="instLumpSum" value="0" step="100" oninput="calcInst()">
+          </div>
+        </div>
+      </div>
+      <div class="cost-section-total">
+        <span class="lbl">Total Installation Cost</span>
+        <span class="val" id="instTotal">$0.00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shipping -->
+  <div class="card">
+    <div class="card-title" onclick="toggleCard('shipBody')">Shipping <span class="toggle" id="shipToggle">▾</span></div>
+    <div class="card-body" id="shipBody">
+      <div class="cost-grid">
+        <div class="cost-field">
+          <label>Rack Type</label>
+          <select id="shipRackType" onchange="calcShip()">
+            <option value="lframe">L-Frame Rack ($250/rack, 30 panels)</option>
+            <option value="aframe">A-Frame Rack ($250/rack, 30 panels)</option>
+            <option value="stepdeck">Step-Deck Trailer ($3,500, 6 racks)</option>
+          </select>
+        </div>
+        <div class="cost-field">
+          <label>Rack Cost ($)</label>
+          <input type="number" id="shipRackCost" value="250" step="10" oninput="calcShip()">
+        </div>
+        <div class="cost-field">
+          <label>Panels per Rack</label>
+          <input type="number" id="shipPanelsPerRack" value="30" step="1" oninput="calcShip()">
+        </div>
+        <div class="cost-field">
+          <label>Freight Cost per Truck ($)</label>
+          <input type="number" id="shipFreightCost" value="3000" step="100" oninput="calcShip()">
+        </div>
+        <div class="cost-field">
+          <label>Racks per Truck</label>
+          <input type="number" id="shipRacksPerTruck" value="14" step="1" oninput="calcShip()">
+        </div>
+        <div class="cost-field">
+          <label>Margin %</label>
+          <input type="number" id="shipMargin" value="10" step="0.5" min="0" oninput="calcShip()">
+        </div>
+      </div>
+      <div class="cost-section-total">
+        <span class="lbl">Total Shipping Cost</span>
+        <span class="val" id="shipTotal">$0.00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Equipment -->
+  <div class="card">
+    <div class="card-title" onclick="toggleCard('equipBody')">Equipment <span class="toggle" id="equipToggle">▾</span></div>
+    <div class="card-body" id="equipBody">
+      <div id="equipLines"></div>
+      <button class="btn btn-ghost btn-sm" onclick="addEquipLine()" style="margin-top:8px">＋ Add Equipment</button>
+      <div class="cost-grid" style="margin-top:12px;max-width:300px">
+        <div class="cost-field">
+          <label>Margin %</label>
+          <input type="number" id="equipMargin" value="10" step="0.5" min="0" oninput="calcEquip()">
+        </div>
+      </div>
+      <div class="cost-section-total">
+        <span class="lbl">Total Equipment Cost</span>
+        <span class="val" id="equipTotal">$0.00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Travel -->
+  <div class="card">
+    <div class="card-title" onclick="toggleCard('travelBody')">Travel <span class="toggle" id="travelToggle">▾</span></div>
+    <div class="card-body" id="travelBody">
+      <div class="toggle-row">
+        <input type="checkbox" id="travelReq" checked onchange="calcTravel()">
+        <label for="travelReq">Travel required</label>
+        &nbsp;&nbsp;
+        <input type="checkbox" id="travelObs" checked onchange="calcTravel()">
+        <label for="travelObs">INOVUES observation needed</label>
+      </div>
+      <div class="cost-grid" id="travelFields">
+        <div class="cost-field"><label>Daily Rate ($/day)</label><input type="number" id="trDailyRate" value="302.59" step="1" oninput="calcTravel()"></div>
+        <div class="cost-field"><label>Work Days</label><input type="number" id="trDays" value="10" step="1" oninput="calcTravel()"></div>
+        <div class="cost-field"><label>Airfare ($/person/trip)</label><input type="number" id="trAirfare" value="750" step="25" oninput="calcTravel()"></div>
+        <div class="cost-field"><label># of Trips</label><input type="number" id="trTrips" value="2" step="1" oninput="calcTravel()"></div>
+        <div class="cost-field"><label>Lodging ($/day)</label><input type="number" id="trLodging" value="125" step="5" oninput="calcTravel()"></div>
+        <div class="cost-field"><label>Meals & Incidentals ($/day)</label><input type="number" id="trMeals" value="75" step="5" oninput="calcTravel()"></div>
+        <div class="cost-field"><label>Transport/Car ($/day)</label><input type="number" id="trTransport" value="125" step="5" oninput="calcTravel()"></div>
+        <div class="cost-field"><label>Total Days (lodging + meals)</label><input type="number" id="trTotalDays" value="11" step="1" oninput="calcTravel()"></div>
+        <div class="cost-field"><label># People Traveling</label><input type="number" id="trPeople" value="1" step="1" oninput="calcTravel()"></div>
+        <div class="cost-field"><label>Margin %</label><input type="number" id="travelMargin" value="10" step="0.5" min="0" oninput="calcTravel()"></div>
+      </div>
+      <div class="cost-section-total">
+        <span class="lbl">Total Travel Cost</span>
+        <span class="val" id="travelTotal">$0.00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Other -->
+  <div class="card">
+    <div class="card-title" onclick="toggleCard('otherBody')">Other Charges <span class="toggle" id="otherToggle">▾</span></div>
+    <div class="card-body" id="otherBody">
+      <p class="small-note">Toggle line items on/off and set amounts. Add custom items as needed.</p>
+      <div id="otherLines"></div>
+      <button class="btn btn-ghost btn-sm" onclick="addOtherLine()" style="margin-top:8px">＋ Add Custom Item</button>
+      <div class="cost-grid" style="margin-top:12px;max-width:300px">
+        <div class="cost-field">
+          <label>Margin %</label>
+          <input type="number" id="otherMargin" value="0" step="0.5" min="0" oninput="calcOther()">
+        </div>
+      </div>
+      <div class="cost-section-total">
+        <span class="lbl">Total Other Charges</span>
+        <span class="val" id="otherTotal">$0.00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Commissions & Fees -->
+  <div class="card">
+    <div class="card-title" onclick="toggleCard('commBody')">Commissions &amp; Fees <span class="toggle" id="commToggle">▾</span></div>
+    <div class="card-body" id="commBody">
+      <p class="small-note">All percentages applied to the total sell price (subtotal).</p>
+      <div class="cost-grid">
+        <div class="cost-field"><label>Finder's Fee / Lead Gen %</label><input type="number" id="commFinders" value="0" step="0.5" min="0" oninput="calcComm()"></div>
+        <div class="cost-field"><label>Sales Commission %</label><input type="number" id="commSales" value="0" step="0.5" min="0" oninput="calcComm()"></div>
+        <div class="cost-field"><label>Other Commissions %</label><input type="number" id="commOther" value="0" step="0.5" min="0" oninput="calcComm()"></div>
+        <div class="cost-field"><label>Sales Tax %</label><input type="number" id="commTax" value="0" step="0.5" min="0" oninput="calcComm()"></div>
+        <div class="cost-field"><label>Discount %</label><input type="number" id="commDiscount" value="0" step="0.5" min="0" oninput="calcComm()"></div>
+      </div>
+      <div class="cost-section-total">
+        <span class="lbl">Total Commissions &amp; Fees</span>
+        <span class="val" id="commTotal">$0.00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="card">
+    <div class="card-title" onclick="toggleCard('summBody')">Project Summary <span class="toggle" id="summToggle">▾</span></div>
+    <div class="card-body" id="summBody">
+      <div class="cost-grid" style="margin-bottom:16px;max-width:500px">
+        <div class="cost-field"><label>Desired Margin % (Product)</label><input type="number" id="desiredMarginProd" value="30" step="0.5" min="0" oninput="calcSummary()"></div>
+        <div class="cost-field"><label>Desired Price Override ($, 0 = auto)</label><input type="number" id="desiredPrice" value="0" step="1000" min="0" oninput="calcSummary()"></div>
+      </div>
+      <div class="summary-grid" id="summaryGrid"></div>
+    </div>
   </div>
 
   <!-- Actions -->
   <div class="section-actions">
     <button class="btn btn-primary" onclick="exportExcel()">⬇ Export Estimate (Excel)</button>
   </div>
-
 </div>
-
 <div class="toast" id="toast"></div>
 
 <script>
-// ── Config ───────────────────────────────────────────────────────────────────
-const API = '';  // same origin
-
-// ── TKO State ────────────────────────────────────────────────────────────────
-let rows = [], rowId = 0;
-let matRows = [];  // [{odooId, name, ref, supplier, category, uom, calcQty, overrideQty, onHand, cost, shipPct}]
-
-const SYSTEMS  = ['SWR','IGR','SWR-IG','SWR-VIG'];
-const FINISHES = ['Painted','Clear Anodized','Black Anodized','Mill Finish'];
-const COLORS   = ['Light','Dark','Custom'];
-const MOUNTS   = ['Overlap-mount','Inset-mount'];
-const GLAZINGS = ['VIG','IG','Monolithic'];
-
-// ── Margins state ─────────────────────────────────────────────────────────────
-const MARGIN_DEFS = [
-  {key:'matMargin',      label:'Materials Margin %',       val:0},
-  {key:'fabMargin',      label:'Fabrication Margin %',     val:0},
-  {key:'instMargin',     label:'Installation Margin %',    val:0},
-  {key:'shipMargin',     label:'Shipping Margin %',        val:10},
-  {key:'equipMargin',    label:'Equipment Margin %',       val:10},
-  {key:'travelMargin',   label:'Travel Margin %',          val:10},
-  {key:'otherMargin',    label:'Other Charges Margin %',   val:0},
-  {key:'findersFee',     label:"Finder's Fee %",           val:0},
-  {key:'salesComm',      label:'Sales Commission %',       val:0},
-  {key:'otherComm',      label:'Other Commissions %',      val:0},
-];
-let margins = {};
-MARGIN_DEFS.forEach(m => margins[m.key] = m.val);
-
-// ── Init ─────────────────────────────────────────────────────────────────────
-document.getElementById('estDate').value = new Date().toISOString().split('T')[0];
-addRow();
-renderMargins();
-
+const API='';
 // ── TKO ──────────────────────────────────────────────────────────────────────
-function addRow(data) {
-  const last = rows[rows.length-1] || {};
-  rows.push(data || {
-    id: rowId++, item:'', width:'', height:'', qty:'',
-    system: last.system||'SWR', finish: last.finish||'Painted',
-    color:  last.color||'Light', mount:  last.mount||'Overlap-mount',
-    headRet: last.headRet!==undefined?last.headRet:true,
-    sillRet: last.sillRet!==undefined?last.sillRet:true,
-    jambSp:  last.jambSp!==undefined?last.jambSp:false,
-    glazing: last.glazing||'VIG', glazPrice: last.glazPrice!==undefined?last.glazPrice:20,
-  });
+let rows=[],rowId=0;
+const SYSTEMS=['SWR','IGR','SWR-IG','SWR-VIG'];
+const FINISHES=['Painted','Clear Anodized','Black Anodized','Mill Finish'];
+const COLORS=['Light','Dark','Custom'];
+const MOUNTS=['Overlap-mount','Inset-mount'];
+const GLAZINGS=['VIG','IG','Monolithic'];
+
+document.getElementById('estDate').value=new Date().toISOString().split('T')[0];
+addRow();
+initEquipLines();
+initOtherLines();
+calcAll();
+
+function addRow(data){
+  const last=rows[rows.length-1]||{};
+  rows.push(data||{id:rowId++,item:'',width:'',height:'',qty:'',
+    system:last.system||'SWR',finish:last.finish||'Painted',color:last.color||'Light',
+    mount:last.mount||'Overlap-mount',headRet:last.headRet!==undefined?last.headRet:true,
+    sillRet:last.sillRet!==undefined?last.sillRet:true,jambSp:last.jambSp!==undefined?last.jambSp:false,
+    glazing:last.glazing||'VIG',glazPrice:last.glazPrice!==undefined?last.glazPrice:20});
   renderTKO();
 }
-
-function removeRow(id) {
-  if (rows.length<=1) return;
-  rows = rows.filter(r=>r.id!==id);
-  renderTKO();
-}
-
-function selFor(id,field,opts,val) {
+function removeRow(id){if(rows.length<=1)return;rows=rows.filter(r=>r.id!==id);renderTKO();}
+function selFor(id,field,opts,val){
   return `<select onchange="upd(${id},'${field}',this.value)">${opts.map(o=>`<option${o===val?' selected':''}>${o}</option>`).join('')}</select>`;
 }
-
-function renderTKO() {
-  document.getElementById('tkoBody').innerHTML = rows.map((r,i)=>`<tr>
+function renderTKO(){
+  document.getElementById('tkoBody2').innerHTML=rows.map((r,i)=>`<tr>
     <td class="rn">${i+1}</td>
     <td><input type="text" value="${r.item}" oninput="upd(${r.id},'item',this.value)" style="min-width:85px"></td>
     <td><input type="number" value="${r.width}" step="0.25" min="0" oninput="upd(${r.id},'width',+this.value)" style="width:68px"></td>
@@ -326,301 +494,385 @@ function renderTKO() {
     <td><input type="number" value="${r.glazPrice}" step="0.5" min="0" oninput="upd(${r.id},'glazPrice',+this.value)" style="width:52px"></td>
     <td><button class="btn-del" onclick="removeRow(${r.id})">✕</button></td>
   </tr>`).join('');
-  renderSummary();
-  recalcMaterialQtys();
+  renderSummary();recalcMaterialQtys();calcAll();
 }
-
-function upd(id,field,val) {
-  const r = rows.find(r=>r.id===id); if(!r) return;
-  r[field]=val; renderSummary(); recalcMaterialQtys();
-}
-
-function renderSummary() {
-  const valid = rows.filter(r=>r.qty>0&&r.width>0&&r.height>0);
+function upd(id,field,val){const r=rows.find(r=>r.id===id);if(!r)return;r[field]=val;renderSummary();recalcMaterialQtys();calcAll();}
+function renderSummary(){
+  const valid=rows.filter(r=>r.qty>0&&r.width>0&&r.height>0);
   if(!valid.length){document.getElementById('summaryArea').innerHTML='';return;}
-  const panels = valid.reduce((s,r)=>s+r.qty,0);
-  const area   = valid.reduce((s,r)=>s+(r.width/12)*(r.height/12)*r.qty,0);
-  document.getElementById('summaryArea').innerHTML = `<div class="metrics">
-    <div class="metric"><div class="metric-label">Total Panels</div><div class="metric-value">${panels}</div><div class="metric-unit">panels</div></div>
-    <div class="metric"><div class="metric-label">Total Area</div><div class="metric-value">${area.toFixed(0)}</div><div class="metric-unit">ft²</div></div>
-    <div class="metric"><div class="metric-label">Avg / Panel</div><div class="metric-value">${(area/panels).toFixed(2)}</div><div class="metric-unit">ft²/panel</div></div>
-    <div class="metric"><div class="metric-label">Types</div><div class="metric-value">${valid.length}</div><div class="metric-unit">window types</div></div>
+  const panels=valid.reduce((s,r)=>s+r.qty,0);
+  const area=valid.reduce((s,r)=>s+(r.width/12)*(r.height/12)*r.qty,0);
+  document.getElementById('summaryArea').innerHTML=`<div class="metrics">
+    <div class="metric"><div class="metric-label">Panels</div><div class="metric-value">${panels}</div></div>
+    <div class="metric"><div class="metric-label">Area</div><div class="metric-value">${area.toFixed(0)}</div><div class="metric-unit">ft²</div></div>
+    <div class="metric"><div class="metric-label">Avg/Panel</div><div class="metric-value">${(area/panels).toFixed(2)}</div><div class="metric-unit">ft²</div></div>
+    <div class="metric"><div class="metric-label">Types</div><div class="metric-value">${valid.length}</div></div>
   </div>`;
 }
-
-// ── TKO totals ────────────────────────────────────────────────────────────────
-function getTotals() {
-  const valid = rows.filter(r=>r.qty>0&&r.width>0&&r.height>0);
+function getTotals(){
+  const valid=rows.filter(r=>r.qty>0&&r.width>0&&r.height>0);
   let panels=0,area=0,perimH=0,perimV=0,headFt=0,sillFt=0,jambFt=0,corners=0,setblks=0,dlJambs=0,spJambs=0;
   for(const r of valid){
     const w=r.width/12,h=r.height/12,q=r.qty;
-    panels+=q; area+=w*h*q; perimH+=2*w*q; perimV+=2*h*q;
-    if(r.headRet) headFt+=w*q;
-    if(r.sillRet) sillFt+=w*q;
-    jambFt+=2*h*q; dlJambs+=2*q*3;
-    if(r.jambSp) spJambs+=2*q*3;
-    corners+=4*q; setblks+=Math.ceil(2.3*q);
+    panels+=q;area+=w*h*q;perimH+=2*w*q;perimV+=2*h*q;
+    if(r.headRet)headFt+=w*q;if(r.sillRet)sillFt+=w*q;
+    jambFt+=2*h*q;dlJambs+=2*q*3;if(r.jambSp)spJambs+=2*q*3;
+    corners+=4*q;setblks+=Math.ceil(2.3*q);
   }
-  return {panels,area,perim:perimH+perimV,perimH,perimV,headFt,sillFt,jambFt,corners,setblks,dlJambs,spJambs};
+  return{panels,area,perim:perimH+perimV,perimH,perimV,headFt,sillFt,jambFt,corners,setblks,dlJambs,spJambs};
 }
 
-// ── Material search ───────────────────────────────────────────────────────────
-let searchTimer = null;
-
-async function searchProducts(q) {
+// ── Materials ────────────────────────────────────────────────────────────────
+let matRows=[],searchTimer=null;
+function searchProducts(q){
   clearTimeout(searchTimer);
-  const dd = document.getElementById('searchDropdown');
+  const dd=document.getElementById('searchDropdown');
   if(!q.trim()){dd.classList.remove('open');return;}
-  dd.innerHTML='<div class="dd-loading">Searching…</div>';
-  dd.classList.add('open');
-  searchTimer = setTimeout(async()=>{
-    try {
-      const res = await fetch(`${API}/api/products/search?q=${encodeURIComponent(q)}`);
-      const products = await res.json();
+  dd.innerHTML='<div class="dd-loading">Searching…</div>';dd.classList.add('open');
+  searchTimer=setTimeout(async()=>{
+    try{
+      const res=await fetch(`${API}/api/products/search?q=${encodeURIComponent(q)}`);
+      const products=await res.json();
       if(!products.length){dd.innerHTML='<div class="dd-loading">No products found.</div>';return;}
-      dd.innerHTML = products.map(p=>`
-        <div class="dd-item" onclick="addMaterial(${JSON.stringify(p).replace(/"/g,'&quot;')})">
-          <div>
-            <div class="dd-name">${p.name}</div>
-            <div class="dd-meta">${p.ref||'—'} · ${p.category}</div>
-          </div>
-          <div class="dd-stock ${p.onHand>0?'in-stock':'no-stock'}">
-            ${p.onHand>0?p.onHand+' '+p.uom:'0 on hand'}
-          </div>
-        </div>`).join('');
-    } catch(e){
-      dd.innerHTML='<div class="dd-loading" style="color:#c81e1e">Error connecting to Odoo.</div>';
-    }
-  }, 300);
+      dd.innerHTML=products.map(p=>`<div class="dd-item" onclick='addMaterial(${JSON.stringify(p).replace(/'/g,"&#39;")})'>
+        <div><div class="dd-name">${p.name}</div><div class="dd-meta">${p.ref||'—'} · ${p.category}</div></div>
+        <div class="dd-stock ${p.onHand>0?'in-stock':'no-stock'}">${p.onHand>0?p.onHand+' '+p.uom:'0 on hand'}</div>
+      </div>`).join('');
+    }catch(e){dd.innerHTML='<div class="dd-loading" style="color:#c81e1e">Error connecting to Odoo.</div>';}
+  },300);
 }
-
-document.addEventListener('click', e=>{
-  if(!e.target.closest('.search-wrap')) document.getElementById('searchDropdown').classList.remove('open');
-});
-
-// ── Add material to table ─────────────────────────────────────────────────────
-function addMaterial(p) {
-  // Prevent duplicates
+document.addEventListener('click',e=>{if(!e.target.closest('.search-wrap'))document.getElementById('searchDropdown').classList.remove('open');});
+function addMaterial(p){
   if(matRows.find(m=>m.odooId===p.id)){toast('Already added.','error');return;}
-  const t = getTotals();
-  const calcQty = estimateQty(p, t);
-  matRows.push({
-    odooId:   p.id,
-    name:     p.name,
-    ref:      p.ref,
-    supplier: p.category,
-    uom:      p.uom,
-    calcQty:  calcQty,
-    overQty:  '',       // blank = use calcQty
-    onHand:   p.onHand,
-    cost:     p.cost,
-    shipPct:  5,        // default 5%
-  });
+  const t=getTotals();
+  matRows.push({odooId:p.id,name:p.name,ref:p.ref,supplier:p.category,uom:p.uom,
+    calcQty:estimateQty(p,t),overQty:'',onHand:p.onHand,cost:p.cost,shipPct:5});
   document.getElementById('searchDropdown').classList.remove('open');
-  document.getElementById('matSearch').value = '';
-  renderMaterials();
+  document.getElementById('matSearch').value='';
+  renderMaterials();calcAll();
   toast(`Added: ${p.name}`,'success');
 }
-
-function removeMaterial(idx) {
-  matRows.splice(idx,1);
-  renderMaterials();
-}
-
-// ── Estimate qty from TKO (best-guess based on product name keywords) ─────────
-function estimateQty(p, t) {
-  if(!t.panels) return 0;
-  const n = (p.name+' '+(p.ref||'')).toLowerCase();
-  // Glazing — by area
-  if(n.includes('glass')||n.includes('glazing')||n.includes('vig')||n.includes(' ig ')) return Math.ceil(t.area);
-  // Aluminum profiles — by perimeter (sticks)
-  if(n.includes('alum')&&n.includes('profile')) return Math.ceil(t.perim/(16*0.8));
-  // Glazing spline — by perimeter (ft)
-  if(n.includes('spline')||n.includes('gasket swr')) return Math.ceil(t.perim/0.9);
-  // Jamb gasket — by jamb ft
-  if(n.includes('jamb gasket')) return Math.ceil(t.jambFt/0.952);
-  // Corner keys — by count
-  if(n.includes('corner key')) return t.corners;
-  // Dual lock — by attachment points
-  if(n.includes('dual lock')) return Math.ceil(t.dlJambs/1620);
-  // Foam baffle — by perimeter_h rolls
-  if(n.includes('foam')) return Math.ceil((t.perimH/2)/(9*0.8));
-  // Head / sill retainer — by ft
-  if(n.includes('head retainer')) return Math.ceil(t.headFt/(10*0.875));
-  if(n.includes('sill retainer')) return Math.ceil(t.sillFt/(10*0.875));
-  // AFTC tape — rolls by ft
-  if(n.includes('aftc')) return Math.ceil(t.perim/(54*0.909));
-  // Setting blocks — count
-  if(n.includes('setblock')||n.includes('setting block')) return t.setblks;
-  // Desiccant bags — per panel
-  if(n.includes('desiccant')||n.includes('dessicant')) return Math.ceil(t.panels/900);
-  // Film — by area / 4ft wide
-  if(n.includes('protection film')) return Math.ceil((t.area/4)/891);
-  // Shipping pads — boxes
-  if(n.includes('shipping pad')) return Math.ceil((t.panels*8)/(2700*0.952));
-  // Masking tape — rolls
-  if(n.includes('masking tape')) return Math.ceil(t.perim/(180*0.909));
-  // Hot melt
-  if(n.includes('hot melt')||n.includes('butyl')) return Math.ceil(t.perim/(164*0.8));
-  // Sealant / dymonic
-  if(n.includes('dymonic')||n.includes('sealant')) return Math.ceil(t.jambFt/(7.6*0.8));
-  // Default: 1 per panel
+function removeMaterial(i){matRows.splice(i,1);renderMaterials();calcAll();}
+function estimateQty(p,t){
+  if(!t.panels)return 0;
+  const n=(p.name+' '+(p.ref||'')).toLowerCase();
+  if(n.includes('glass')||n.includes('vig')||(!n.includes('spline')&&n.includes(' ig ')))return Math.ceil(t.area);
+  if(n.includes('alum')&&n.includes('profile'))return Math.ceil(t.perim/(16*0.8));
+  if(n.includes('spline')||n.includes('gasket swr'))return Math.ceil(t.perim/0.9);
+  if(n.includes('jamb gasket'))return Math.ceil(t.jambFt/0.952);
+  if(n.includes('corner key'))return t.corners;
+  if(n.includes('dual lock'))return Math.ceil(t.dlJambs/1620);
+  if(n.includes('foam'))return Math.ceil((t.perimH/2)/(9*0.8));
+  if(n.includes('head retainer'))return Math.ceil(t.headFt/(10*0.875));
+  if(n.includes('sill retainer'))return Math.ceil(t.sillFt/(10*0.875));
+  if(n.includes('aftc'))return Math.ceil(t.perim/(54*0.909));
+  if(n.includes('setblock')||n.includes('setting block'))return t.setblks;
+  if(n.includes('desiccant')||n.includes('dessicant'))return Math.ceil(t.panels/900);
+  if(n.includes('protection film'))return Math.ceil((t.area/4)/891);
+  if(n.includes('shipping pad'))return Math.ceil((t.panels*8)/(2700*0.952));
+  if(n.includes('masking tape'))return Math.ceil(t.perim/(180*0.909));
+  if(n.includes('hot melt')||n.includes('butyl'))return Math.ceil(t.perim/(164*0.8));
+  if(n.includes('dymonic')||n.includes('sealant'))return Math.ceil(t.jambFt/(7.6*0.8));
   return t.panels;
 }
-
-// ── Recalc qty when TKO changes ───────────────────────────────────────────────
-function recalcMaterialQtys() {
-  const t = getTotals();
-  matRows.forEach(m=>{
-    m.calcQty = estimateQty({name:m.name,ref:m.ref}, t);
-  });
+function recalcMaterialQtys(){
+  const t=getTotals();
+  matRows.forEach(m=>{m.calcQty=estimateQty({name:m.name,ref:m.ref},t);});
   renderMaterials();
 }
-
-// ── Render materials table ────────────────────────────────────────────────────
-function renderMaterials() {
-  const tbody = document.getElementById('matBody');
+function getMatTotal(){
+  return matRows.reduce((s,m)=>{
+    const qty=m.overQty!==''&&m.overQty>=0?+m.overQty:m.calcQty;
+    return s+qty*m.cost*(1+m.shipPct/100);
+  },0);
+}
+function renderMaterials(){
+  const tbody=document.getElementById('matBody2');
   if(!matRows.length){
     tbody.innerHTML=`<tr><td colspan="13" style="text-align:center;padding:20px;color:var(--muted);font-family:'DM Sans',sans-serif">Search and add materials above.</td></tr>`;
     document.getElementById('matFoot').innerHTML='';
-    document.getElementById('matInfo').style.display='none';
-    return;
+    document.getElementById('matInfo').style.display='none';return;
   }
-
   let totalCost=0;
-  tbody.innerHTML = matRows.map((m,i)=>{
-    const qty    = m.overQty!==''&&m.overQty>=0 ? +m.overQty : m.calcQty;
-    const mat    = qty * m.cost;
-    const ship   = mat * (m.shipPct/100);
-    const total  = mat + ship;
-    totalCost   += total;
-    const delta  = Math.max(0, qty - m.onHand);
-    const onHandCls = m.onHand>=qty?'onhand-ok':m.onHand>0?'onhand-lo':'onhand-no';
-    const deltaCls  = delta>0?'delta-need':'delta-ok';
+  tbody.innerHTML=matRows.map((m,i)=>{
+    const qty=m.overQty!==''&&m.overQty>=0?+m.overQty:m.calcQty;
+    const mat=qty*m.cost,ship=mat*(m.shipPct/100),total=mat+ship;
+    totalCost+=total;
+    const delta=Math.max(0,qty-m.onHand);
+    const ohCls=m.onHand>=qty?'onhand-ok':m.onHand>0?'onhand-lo':'onhand-no';
+    const dCls=delta>0?'delta-need':'delta-ok';
     return `<tr>
-      <td>${m.name}</td>
-      <td>${m.supplier}</td>
-      <td>${m.ref||'—'}</td>
-      <td style="text-align:right">${m.calcQty}</td>
-      <td><input type="number" class="edit-qty" value="${m.overQty}" min="0" placeholder="${m.calcQty}" oninput="setOverride(${i},this.value)" style="width:65px"></td>
+      <td>${m.name}</td><td>${m.supplier}</td><td>${m.ref||'—'}</td>
+      <td>${m.calcQty}</td>
+      <td><input type="number" value="${m.overQty}" min="0" placeholder="${m.calcQty}" oninput="setOverride(${i},this.value)" style="width:65px;text-align:center;font-family:'DM Mono',monospace;font-size:12px;padding:3px 6px"></td>
       <td>${m.uom}</td>
-      <td class="${onHandCls}">${m.onHand}</td>
-      <td class="${deltaCls}">${delta>0?'+'+delta:'✓'}</td>
-      <td>$${fmt(m.cost)}</td>
-      <td>$${fmt(mat)}</td>
-      <td><input type="number" value="${m.shipPct}" min="0" max="100" step="1" oninput="setShip(${i},this.value)" style="width:50px;text-align:center"></td>
+      <td class="${ohCls}">${m.onHand}</td>
+      <td class="${dCls}">${delta>0?'+'+delta:'✓'}</td>
+      <td>$${fmt(m.cost)}</td><td>$${fmt(mat)}</td>
+      <td><input type="number" value="${m.shipPct}" min="0" max="100" step="1" oninput="setShip(${i},this.value)" style="width:50px;text-align:center;font-family:'DM Mono',monospace;font-size:12px;padding:3px 6px"></td>
       <td>$${fmt(total)}</td>
       <td><button class="btn-del" onclick="removeMaterial(${i})">✕</button></td>
     </tr>`;
   }).join('');
-
-  document.getElementById('matFoot').innerHTML=`<tr class="tfoot-row">
-    <td colspan="11" style="text-align:right;font-family:'DM Sans',sans-serif">TOTAL</td>
-    <td>$${fmt(totalCost)}</td><td></td>
-  </tr>`;
-
-  const needOrder = matRows.filter(m=>{
-    const qty = m.overQty!==''&&m.overQty>=0?+m.overQty:m.calcQty;
-    return qty > m.onHand;
-  }).length;
-  const info = document.getElementById('matInfo');
+  document.getElementById('matFoot').innerHTML=`<tr class="tfoot-row"><td colspan="11" style="text-align:right;font-family:'DM Sans',sans-serif">TOTAL</td><td>$${fmt(totalCost)}</td><td></td></tr>`;
+  const needOrder=matRows.filter(m=>{const qty=m.overQty!==''&&m.overQty>=0?+m.overQty:m.calcQty;return qty>m.onHand;}).length;
+  const info=document.getElementById('matInfo');
   info.style.display='block';
-  info.textContent = needOrder>0
-    ? `⚠ ${needOrder} material(s) need to be ordered (on-hand < required).`
-    : '✅ All materials available in stock.';
+  info.textContent=needOrder>0?`⚠ ${needOrder} material(s) need to be ordered.`:'✅ All materials available in stock.';
+}
+function setOverride(i,v){matRows[i].overQty=v===''?'':+v;renderMaterials();calcAll();}
+function setShip(i,v){matRows[i].shipPct=+v||0;renderMaterials();calcAll();}
+
+// ── Fabrication ───────────────────────────────────────────────────────────────
+function calcFab(){
+  const t=getTotals();if(!t.panels){document.getElementById('fabTotal').textContent='$0.00';calcSummary();return;}
+  const by=document.getElementById('fabBy').value;
+  const rateINOV=+document.getElementById('fabRateINOVUES').value||37.82;
+  const rateMG=+document.getElementById('fabRateMG').value||50;
+  const lump=+document.getElementById('fabLumpSum').value||5;
+  const hrCut=+document.getElementById('fabHrCut').value||0;
+  const hrAsm=+document.getElementById('fabHrAssembly').value||0;
+  const hrCln=+document.getElementById('fabHrClean').value||0;
+  const margin=(+document.getElementById('fabMargin').value||0)/100;
+  const rate=by==='MG'?rateMG:rateINOV;
+  const lumpCost=lump*t.area;
+  const laborCost=(hrCut+hrAsm+hrCln)*rate*t.panels;
+  const base=lumpCost+laborCost;
+  const total=base*(1+margin);
+  document.getElementById('fabTotal').textContent='$'+fmt(total);
+  calcSummary();
+  return total;
 }
 
-function setOverride(i,val) { matRows[i].overQty=val===''?'':+val; renderMaterials(); }
-function setShip(i,val)     { matRows[i].shipPct=+val||0;          renderMaterials(); }
-
-// ── Margins ──────────────────────────────────────────────────────────────────
-function renderMargins() {
-  document.getElementById('marginGrid').innerHTML = MARGIN_DEFS.map(m=>`
-    <div class="margin-item">
-      <label>${m.label}</label>
-      <input type="number" value="${margins[m.key]}" min="0" max="100" step="0.5"
-             oninput="margins['${m.key}']=+this.value">
-    </div>`).join('');
+// ── Installation ──────────────────────────────────────────────────────────────
+function calcInst(){
+  const t=getTotals();
+  const included=document.getElementById('instIncluded').checked;
+  document.getElementById('instFields').style.display=included?'':'none';
+  if(!included||!t.panels){document.getElementById('instTotal').textContent='$0.00';calcSummary();return 0;}
+  const union=document.getElementById('instUnion').value;
+  const rate=union==='union'?125:union==='nonunion'?100:37.82;
+  const hrUnit=+document.getElementById('instHrPerUnit').value||1.02;
+  const pmHrs=+document.getElementById('instPMHrs').value||0;
+  const pmRate=+document.getElementById('instPMRate').value||85;
+  const lump=+document.getElementById('instLumpSum').value||0;
+  const takeoff=document.getElementById('instTakeoff').checked?+document.getElementById('instTakeoffAmt').value:0;
+  const margin=(+document.getElementById('instMargin').value||0)/100;
+  const base=lump>0?lump:(rate*hrUnit*t.panels)+(pmHrs*pmRate)+takeoff;
+  const total=base*(1+margin);
+  document.getElementById('instTotal').textContent='$'+fmt(total);
+  calcSummary();return total;
 }
 
-// ── Excel Export ──────────────────────────────────────────────────────────────
-function exportExcel() {
-  const proj = document.getElementById('projectName').value || 'Estimate';
-  const wb   = XLSX.utils.book_new();
+// ── Shipping ──────────────────────────────────────────────────────────────────
+function calcShip(){
+  const t=getTotals();if(!t.panels){document.getElementById('shipTotal').textContent='$0.00';calcSummary();return 0;}
+  const rackCost=+document.getElementById('shipRackCost').value||250;
+  const panelsPerRack=+document.getElementById('shipPanelsPerRack').value||30;
+  const freightCost=+document.getElementById('shipFreightCost').value||3000;
+  const racksPerTruck=+document.getElementById('shipRacksPerTruck').value||14;
+  const margin=(+document.getElementById('shipMargin').value||0)/100;
+  const racks=Math.ceil(t.panels/panelsPerRack);
+  const trucks=Math.ceil(racks/racksPerTruck);
+  const base=racks*rackCost+trucks*freightCost;
+  const total=base*(1+margin);
+  document.getElementById('shipTotal').textContent='$'+fmt(total);
+  calcSummary();return total;
+}
 
-  // ── Sheet 1: Full estimate ─────────────────────────────────────────────────
-  const t = getTotals();
-  const estRows = [
-    [`INOVUES Cost Estimate — ${proj}`],
-    [`Customer: ${document.getElementById('customer').value}`, '', `Date: ${document.getElementById('estDate').value}`, '', `By: ${document.getElementById('estBy').value}`, `Reviewed: ${document.getElementById('reviewedBy').value}`],
-    [],
-    ['Material','Supplier','Odoo Ref','Calc Qty','Override Qty','Unit','On Hand','To Order','Unit Cost','Mat Cost','Ship %','Ship Cost','Total Cost'],
+// ── Equipment ────────────────────────────────────────────────────────────────
+let equipLines=[];
+function initEquipLines(){
+  equipLines=[
+    {name:'Scissor Lift',rate:800,unit:'week',qty:0,enabled:false},
+    {name:'Lull Rental',rate:800,unit:'week',qty:0,enabled:false},
+    {name:'Baker Rolling Staging',rate:50,unit:'week',qty:1,enabled:false},
+    {name:'Finish Protection Boards/Blankets',rate:500,unit:'LS',qty:1,enabled:false},
   ];
-
-  let grandTotal=0;
-  const orderRows = [];
-
-  matRows.forEach(m=>{
-    const qty   = m.overQty!==''&&m.overQty>=0?+m.overQty:m.calcQty;
-    const mat   = qty*m.cost;
-    const ship  = mat*(m.shipPct/100);
-    const total = mat+ship;
-    const delta = Math.max(0, qty-m.onHand);
-    grandTotal += total;
-    estRows.push([m.name,m.supplier,m.ref,m.calcQty,m.overQty||'',m.uom,m.onHand,delta>0?delta:0,m.cost,mat,m.shipPct/100,ship,total]);
-    if(delta>0) orderRows.push([m.name,m.ref,m.uom,qty,m.onHand,delta,m.cost,delta*m.cost]);
-  });
-
-  estRows.push([]);
-  estRows.push(['','','','','','','','','','','','TOTAL',grandTotal]);
-
-  // Margins section
-  estRows.push([]);
-  estRows.push(['MARGINS']);
-  MARGIN_DEFS.forEach(md=>{estRows.push([md.label,margins[md.key]+'%']);});
-
-  const ws1 = XLSX.utils.aoa_to_sheet(estRows);
-  ws1['!cols'] = [36,20,14,10,12,8,10,10,10,12,8,12,14].map(w=>({wch:w}));
-  XLSX.utils.book_append_sheet(wb, ws1, 'Estimate');
-
-  // ── Sheet 2: Order List ─────────────────────────────────────────────────────
-  const orderSheet = [
-    [`PURCHASE ORDER LIST — ${proj}`],
-    [`Generated: ${new Date().toLocaleDateString()}`],
-    [],
-    ['Material','Odoo Ref','Unit','Qty Needed','On Hand','To Order','Unit Cost','Total Cost'],
-    ...orderRows,
-  ];
-  if(orderRows.length>0){
-    const totalOrderCost = orderRows.reduce((s,r)=>s+r[7],0);
-    orderSheet.push([]);
-    orderSheet.push(['','','','','','','TOTAL ORDER COST',totalOrderCost]);
-  }
-  const ws2 = XLSX.utils.aoa_to_sheet(orderSheet);
-  ws2['!cols'] = [36,14,8,12,10,10,12,14].map(w=>({wch:w}));
-  XLSX.utils.book_append_sheet(wb, ws2, 'Order List');
-
-  XLSX.writeFile(wb, `INOVUES_Estimate_${proj.replace(/\s+/g,'_')}.xlsx`);
-  toast('Estimate exported!','success');
+  renderEquipLines();
+}
+function addEquipLine(){
+  equipLines.push({name:'',rate:0,unit:'LS',qty:1,enabled:true});
+  renderEquipLines();
+}
+function renderEquipLines(){
+  document.getElementById('equipLines').innerHTML=`
+    <table class="line-items-table"><thead><tr><th>On</th><th>Item</th><th>Rate</th><th>Qty/Unit</th><th>Cost</th><th></th></tr></thead><tbody>
+    ${equipLines.map((e,i)=>`<tr>
+      <td><input type="checkbox" ${e.enabled?'checked':''} onchange="equipLines[${i}].enabled=this.checked;calcEquip()"></td>
+      <td><input type="text" value="${e.name}" oninput="equipLines[${i}].name=this.value" style="min-width:180px"></td>
+      <td><input type="number" value="${e.rate}" min="0" step="50" oninput="equipLines[${i}].rate=+this.value;calcEquip()" style="width:90px"></td>
+      <td><input type="number" value="${e.qty}" min="0" step="1" oninput="equipLines[${i}].qty=+this.value;calcEquip()" style="width:70px"> ${e.unit}</td>
+      <td>$${fmt(e.enabled?e.rate*e.qty:0)}</td>
+      <td><button class="btn-del" onclick="equipLines.splice(${i},1);renderEquipLines();calcEquip()">✕</button></td>
+    </tr>`).join('')}
+    </tbody></table>`;
+  calcEquip();
+}
+function calcEquip(){
+  const margin=(+document.getElementById('equipMargin').value||0)/100;
+  const base=equipLines.filter(e=>e.enabled).reduce((s,e)=>s+e.rate*e.qty,0);
+  const total=base*(1+margin);
+  document.getElementById('equipTotal').textContent='$'+fmt(total);
+  calcSummary();return total;
 }
 
-// ── TKO Excel Import ──────────────────────────────────────────────────────────
-function importExcel(event) {
-  const file = event.target.files[0]; if(!file) return;
-  const reader = new FileReader();
-  reader.onload = e=>{
-    try {
-      const wb   = XLSX.read(e.target.result,{type:'array'});
-      const ws   = wb.Sheets['TKO'];
-      if(!ws){toast('Sheet "TKO" not found. Use the INOVUES template.','error');return;}
-      const data = XLSX.utils.sheet_to_json(ws,{range:2,defval:''});
-      const cleaned = data.filter((_,i)=>i>0);
-      const imported = [];
+// ── Travel ───────────────────────────────────────────────────────────────────
+function calcTravel(){
+  const req=document.getElementById('travelReq').checked;
+  document.getElementById('travelFields').style.display=req?'':'none';
+  if(!req){document.getElementById('travelTotal').textContent='$0.00';calcSummary();return 0;}
+  const daily=+document.getElementById('trDailyRate').value||0;
+  const days=+document.getElementById('trDays').value||0;
+  const airfare=+document.getElementById('trAirfare').value||0;
+  const trips=+document.getElementById('trTrips').value||0;
+  const lodging=+document.getElementById('trLodging').value||0;
+  const meals=+document.getElementById('trMeals').value||0;
+  const transport=+document.getElementById('trTransport').value||0;
+  const totalDays=+document.getElementById('trTotalDays').value||0;
+  const people=+document.getElementById('trPeople').value||1;
+  const margin=(+document.getElementById('travelMargin').value||0)/100;
+  const base=(daily*days)+(airfare*trips*people)+(lodging*totalDays*people)+(meals*totalDays*people)+(transport*totalDays);
+  const total=base*(1+margin);
+  document.getElementById('travelTotal').textContent='$'+fmt(total);
+  calcSummary();return total;
+}
+
+// ── Other ────────────────────────────────────────────────────────────────────
+let otherLines=[];
+function initOtherLines(){
+  otherLines=[
+    {name:'Site Visit & Assessment',amt:7500,enabled:false},
+    {name:'Detailed Window Audit / Inventory',amt:1750,enabled:false},
+    {name:'System Design Customization',amt:4000,enabled:false},
+    {name:'Thermal Stress Analysis',amt:8500,enabled:false},
+    {name:'Structural Analysis',amt:10000,enabled:false},
+    {name:'Thermal Performance Simulation',amt:5000,enabled:false},
+    {name:'Design Development',amt:3317,enabled:false},
+    {name:'CFD Analysis',amt:10000,enabled:false},
+    {name:'Window Performance M&V',amt:10000,enabled:false},
+    {name:'Building Energy Model',amt:10000,enabled:false},
+    {name:'Cost-Benefit Analysis',amt:2500,enabled:false},
+    {name:'Utility Incentive Application',amt:1500,enabled:false},
+    {name:'Visual/Performance Mockup',amt:20000,enabled:false},
+    {name:'Performance Bond',amt:13243,enabled:false},
+  ];
+  renderOtherLines();
+}
+function addOtherLine(){
+  otherLines.push({name:'',amt:0,enabled:true});
+  renderOtherLines();
+}
+function renderOtherLines(){
+  document.getElementById('otherLines').innerHTML=`
+    <table class="line-items-table"><thead><tr><th>On</th><th>Item</th><th>Amount ($)</th><th>Cost</th><th></th></tr></thead><tbody>
+    ${otherLines.map((e,i)=>`<tr>
+      <td><input type="checkbox" ${e.enabled?'checked':''} onchange="otherLines[${i}].enabled=this.checked;calcOther()"></td>
+      <td><input type="text" value="${e.name}" oninput="otherLines[${i}].name=this.value" style="min-width:220px"></td>
+      <td><input type="number" value="${e.amt}" min="0" step="100" oninput="otherLines[${i}].amt=+this.value;calcOther()" style="width:110px"></td>
+      <td>$${fmt(e.enabled?e.amt:0)}</td>
+      <td><button class="btn-del" onclick="otherLines.splice(${i},1);renderOtherLines();calcOther()">✕</button></td>
+    </tr>`).join('')}
+    </tbody></table>`;
+  calcOther();
+}
+function calcOther(){
+  const margin=(+document.getElementById('otherMargin').value||0)/100;
+  const base=otherLines.filter(e=>e.enabled).reduce((s,e)=>s+e.amt,0);
+  const total=base*(1+margin);
+  document.getElementById('otherTotal').textContent='$'+fmt(total);
+  calcSummary();return total;
+}
+
+// ── Commissions ───────────────────────────────────────────────────────────────
+function calcComm(){calcSummary();}
+
+// ── Summary ───────────────────────────────────────────────────────────────────
+function calcAll(){calcFab();calcInst();calcShip();calcEquip();calcTravel();calcOther();calcSummary();}
+
+function calcSummary(){
+  const t=getTotals();
+  const matCost=getMatTotal();
+  const fabCost=parseDollar('fabTotal');
+  const instCost=parseDollar('instTotal');
+  const shipCost=parseDollar('shipTotal');
+  const equipCost=parseDollar('equipTotal');
+  const travelCost=parseDollar('travelTotal');
+  const otherCost=parseDollar('otherTotal');
+  const totalCosts=matCost+fabCost+instCost+shipCost+equipCost+travelCost+otherCost;
+
+  const desiredMargin=(+document.getElementById('desiredMarginProd').value||0)/100;
+  const desiredPriceOverride=+document.getElementById('desiredPrice').value||0;
+  const subtotal=desiredPriceOverride>0?desiredPriceOverride:(desiredMargin<1?totalCosts/(1-desiredMargin):totalCosts);
+
+  const findersPct=(+document.getElementById('commFinders').value||0)/100;
+  const salesPct=(+document.getElementById('commSales').value||0)/100;
+  const otherCommPct=(+document.getElementById('commOther').value||0)/100;
+  const taxPct=(+document.getElementById('commTax').value||0)/100;
+  const discPct=(+document.getElementById('commDiscount').value||0)/100;
+
+  const finders=subtotal*findersPct;
+  const salesComm=subtotal*salesPct;
+  const otherComm=subtotal*otherCommPct;
+  const tax=subtotal*taxPct;
+  const disc=subtotal*discPct;
+  const totalComm=finders+salesComm+otherComm+tax-disc;
+  document.getElementById('commTotal').textContent='$'+fmt(totalComm);
+
+  const sellPrice=subtotal+tax-disc;
+  const grossProfit=sellPrice-totalCosts;
+  const grossMargin=sellPrice>0?grossProfit/sellPrice:0;
+  const netProfit=grossProfit-finders-salesComm-otherComm;
+  const netMargin=sellPrice>0?netProfit/sellPrice:0;
+
+  document.getElementById('summaryGrid').innerHTML=`
+    <div class="summary-metric"><div class="lbl">Total Costs</div><div class="val">$${fmtK(totalCosts)}</div></div>
+    <div class="summary-metric"><div class="lbl">Sell Price</div><div class="val">$${fmtK(sellPrice)}</div></div>
+    <div class="summary-metric"><div class="lbl">Gross Profit</div><div class="val" style="color:${grossProfit>=0?'var(--success)':'var(--danger)'}">$${fmtK(grossProfit)}</div><div class="sub">Margin: ${(grossMargin*100).toFixed(1)}%</div></div>
+    <div class="summary-metric"><div class="lbl">Net Profit</div><div class="val" style="color:${netProfit>=0?'var(--success)':'var(--danger)'}">$${fmtK(netProfit)}</div><div class="sub">Margin: ${(netMargin*100).toFixed(1)}%</div></div>
+    ${t.panels>0?`<div class="summary-metric"><div class="lbl">Price / Panel</div><div class="val">$${fmt(sellPrice/t.panels)}</div></div>
+    <div class="summary-metric"><div class="lbl">Price / SF</div><div class="val">$${fmt(sellPrice/t.area)}</div></div>`:''}
+    <div class="summary-metric"><div class="lbl">Materials</div><div class="val">$${fmtK(matCost)}</div></div>
+    <div class="summary-metric"><div class="lbl">Fabrication</div><div class="val">$${fmtK(fabCost)}</div></div>
+    <div class="summary-metric"><div class="lbl">Installation</div><div class="val">$${fmtK(instCost)}</div></div>
+    <div class="summary-metric"><div class="lbl">Shipping</div><div class="val">$${fmtK(shipCost)}</div></div>
+    <div class="summary-metric"><div class="lbl">Equipment</div><div class="val">$${fmtK(equipCost)}</div></div>
+    <div class="summary-metric"><div class="lbl">Travel</div><div class="val">$${fmtK(travelCost)}</div></div>
+    <div class="summary-metric"><div class="lbl">Other</div><div class="val">$${fmtK(otherCost)}</div></div>
+  `;
+}
+
+function parseDollar(id){
+  const t=document.getElementById(id).textContent;
+  return parseFloat(t.replace(/[$,K]/g,''))*( t.includes('K')?1000:1)||0;
+}
+
+// ── Collapsible cards ─────────────────────────────────────────────────────────
+function toggleCard(bodyId){
+  const body=document.getElementById(bodyId);
+  const toggleId=bodyId.replace('Body','Toggle');
+  const toggle=document.getElementById(toggleId);
+  body.classList.toggle('collapsed');
+  if(toggle)toggle.textContent=body.classList.contains('collapsed')?'▸':'▾';
+}
+
+// ── Excel Import/Export ───────────────────────────────────────────────────────
+function importExcel(event){
+  const file=event.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const ws=wb.Sheets['TKO'];if(!ws){toast('Sheet "TKO" not found.','error');return;}
+      const data=XLSX.utils.sheet_to_json(ws,{range:2,defval:''});
+      const cleaned=data.filter((_,i)=>i>0);
+      const imported=[];
       for(const r of cleaned){
         const w=parseFloat(r['Width (in)']),h=parseFloat(r['Height (in)']),q=parseInt(r['Qty']);
-        if(!w||!h||!q||q<=0) continue;
-        imported.push({id:rowId++,item:String(r['Item Name']||r['Item #']||'').trim(),width:w,height:h,qty:q,
-          system:String(r['System Type']||'SWR'),finish:String(r['Finish']||'Painted'),color:String(r['Color']||'Light'),
+        if(!w||!h||!q||q<=0)continue;
+        imported.push({id:rowId++,item:String(r['Item Name']||r['Item #']||'').trim(),
+          width:w,height:h,qty:q,system:String(r['System Type']||'SWR'),
+          finish:String(r['Finish']||'Painted'),color:String(r['Color']||'Light'),
           mount:String(r['Mount Type']||'Overlap-mount'),
           headRet:String(r['Head Retainer']).toLowerCase()==='yes',
           sillRet:String(r['Sill Retainer']).toLowerCase()==='yes',
@@ -628,22 +880,18 @@ function importExcel(event) {
           glazing:String(r['Glazing Type']||'VIG'),glazPrice:parseFloat(r['Glazing $/SF'])||20});
       }
       if(!imported.length){toast('No valid rows found.','error');return;}
-      rows=imported; renderTKO();
-      toast(`Imported ${imported.length} window type(s).`,'success');
-    } catch(err){toast('Import failed: '+err.message,'error');}
+      rows=imported;renderTKO();toast(`Imported ${imported.length} window type(s).`,'success');
+    }catch(err){toast('Import failed: '+err.message,'error');}
     event.target.value='';
   };
   reader.readAsArrayBuffer(file);
 }
-
-// ── TKO Template Download ─────────────────────────────────────────────────────
-function downloadTemplate() {
+function downloadTemplate(){
   const wb=XLSX.utils.book_new();
   const d=[
-    ['INOVUES — Window Takeoff Template (TKO)'],
-    ['Fill in one row per window type. Upload this file to the INOVUES Estimator app.'],
+    ['INOVUES — Window Takeoff Template (TKO)'],['Fill in one row per window type.'],
     ['Item #','Item Name','Width (in)','Height (in)','Qty','System Type','Finish','Color','Mount Type','Head Retainer','Sill Retainer','Jamb Spacers','Glazing Type','Glazing $/SF'],
-    ['e.g. 1','e.g. SWR-A1','e.g. 18.25','e.g. 70','e.g. 180','SWR/IGR/SWR-IG/SWR-VIG','Painted/Clear Anodized/...','Light/Dark/Custom','Overlap-mount/Inset-mount','yes/no','yes/no','yes/no','VIG/IG/Monolithic','e.g. 20'],
+    ['e.g. 1','e.g. SWR-A1','e.g. 18.25','e.g. 70','e.g. 180','SWR/IGR/SWR-IG/SWR-VIG','Painted/...','Light/Dark','Overlap-mount/Inset-mount','yes/no','yes/no','yes/no','VIG/IG/Monolithic','e.g. 20'],
     [1,'SWR-A1',18.25,70,180,'SWR','Painted','Light','Overlap-mount','yes','yes','yes','VIG',20],
     [2,'SWR-A2',40.625,70,90,'SWR','Painted','Light','Overlap-mount','yes','yes','yes','VIG',20],
     [3,'SWR-B',41.75,70,40,'SWR','Painted','Light','Overlap-mount','yes','yes','yes','VIG',20],
@@ -655,9 +903,53 @@ function downloadTemplate() {
   XLSX.utils.book_append_sheet(wb,ws,'TKO');
   XLSX.writeFile(wb,'INOVUES_TKO_Template.xlsx');
 }
+function exportExcel(){
+  const proj=document.getElementById('projectName').value||'Estimate';
+  const wb=XLSX.utils.book_new();
+  const t=getTotals();
+  // Sheet 1: Summary
+  const sumRows=[
+    [`INOVUES Cost Estimate — ${proj}`],
+    [`Customer: ${document.getElementById('customer').value}`,'',`Date: ${document.getElementById('estDate').value}`,'',`By: ${document.getElementById('estBy').value}`],
+    [],
+    ['COST SUMMARY','Amount'],
+    ['Materials', getMatTotal()],
+    ['Fabrication', parseDollar('fabTotal')],
+    ['Installation', parseDollar('instTotal')],
+    ['Shipping', parseDollar('shipTotal')],
+    ['Equipment', parseDollar('equipTotal')],
+    ['Travel', parseDollar('travelTotal')],
+    ['Other Charges', parseDollar('otherTotal')],
+    ['TOTAL COSTS', getMatTotal()+parseDollar('fabTotal')+parseDollar('instTotal')+parseDollar('shipTotal')+parseDollar('equipTotal')+parseDollar('travelTotal')+parseDollar('otherTotal')],
+  ];
+  const ws1=XLSX.utils.aoa_to_sheet(sumRows);
+  XLSX.utils.book_append_sheet(wb,ws1,'Summary');
+  // Sheet 2: Materials + Order List
+  const matHeader=['Material','Category','Ref','Calc Qty','Override','Unit','On Hand','To Order','Unit Cost','Mat Cost','Ship%','Total'];
+  const matData=matRows.map(m=>{
+    const qty=m.overQty!==''&&m.overQty>=0?+m.overQty:m.calcQty;
+    const mat=qty*m.cost,ship=mat*(m.shipPct/100),total=mat+ship;
+    const delta=Math.max(0,qty-m.onHand);
+    return[m.name,m.supplier,m.ref,m.calcQty,m.overQty||'',m.uom,m.onHand,delta,m.cost,mat,m.shipPct/100,total];
+  });
+  const ws2=XLSX.utils.aoa_to_sheet([[`Materials — ${proj}`],[],matHeader,...matData]);
+  XLSX.utils.book_append_sheet(wb,ws2,'Materials');
+  // Sheet 3: Order List (only what needs ordering)
+  const orderData=matRows.filter(m=>{const qty=m.overQty!==''&&m.overQty>=0?+m.overQty:m.calcQty;return qty>m.onHand;}).map(m=>{
+    const qty=m.overQty!==''&&m.overQty>=0?+m.overQty:m.calcQty;
+    const delta=qty-m.onHand;
+    return[m.name,m.ref,m.uom,qty,m.onHand,delta,m.cost,delta*m.cost];
+  });
+  const ws3=XLSX.utils.aoa_to_sheet([[`PURCHASE ORDER LIST — ${proj}`],[`Generated: ${new Date().toLocaleDateString()}`],[],
+    ['Material','Ref','Unit','Qty Needed','On Hand','To Order','Unit Cost','Total Cost'],...orderData]);
+  XLSX.utils.book_append_sheet(wb,ws3,'Order List');
+  XLSX.writeFile(wb,`INOVUES_Estimate_${proj.replace(/\s+/g,'_')}.xlsx`);
+  toast('Estimate exported!','success');
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fmt(n){return Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmtK(n){return n>=1000?(n/1000).toFixed(1)+'K':fmt(n);}
 function toast(msg,type='success'){
   const el=document.getElementById('toast');
   el.textContent=(type==='success'?'✓ ':'✗ ')+msg;
