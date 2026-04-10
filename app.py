@@ -3,6 +3,7 @@ import pandas as pd
 import xmlrpc.client
 import os
 from datetime import date
+from materials import compute_tko_totals, get_swr_materials
 
 st.set_page_config(
     page_title="INOVUES Estimator",
@@ -173,8 +174,43 @@ if valid_rows:
     m3.metric("Avg Area/Panel", f"{total_area/total_panels:.2f} ft²" if total_panels else "—")
 
     st.divider()
-    st.info("✅ TKO complete. **Phase 2 — Material Calculation** coming next.")
-    if st.button("▶ Calculate Materials", type="primary", disabled=True):
-        pass  # Phase 2
+    if st.button("▶ Calculate Materials", type="primary"):
+        st.session_state.calc_done = True
+
+    if st.session_state.get("calc_done"):
+        totals = compute_tko_totals(valid_rows)
+        materials = get_swr_materials(totals)
+
+        st.subheader("Material Requirements")
+        st.caption("Quantities needed for this project based on TKO input.")
+
+        if not materials:
+            st.warning("No materials calculated — check TKO input.")
+        else:
+            df_mat = pd.DataFrame(materials)[[
+                "name", "supplier", "odoo_ref",
+                "demand", "demand_unit",
+                "purchase_qty", "cost_unit",
+                "mat_cost", "ship_cost", "total_cost"
+            ]]
+            df_mat.columns = [
+                "Material", "Supplier", "Odoo Ref",
+                "Demand", "Demand Unit",
+                "Purchase Qty", "Buy Unit",
+                "Mat Cost ($)", "Ship Cost ($)", "Total Cost ($)"
+            ]
+            st.dataframe(df_mat, use_container_width=True, hide_index=True)
+
+            total_mat  = sum(m["mat_cost"]   for m in materials)
+            total_ship = sum(m["ship_cost"]  for m in materials)
+            total_all  = sum(m["total_cost"] for m in materials)
+
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Material Cost",  f"${total_mat:,.2f}")
+            c2.metric("Shipping Cost",  f"${total_ship:,.2f}")
+            c3.metric("Total Cost",     f"${total_all:,.2f}")
+
+            st.divider()
+            st.info("✅ Materials calculated. **Phase 3 — Odoo Inventory Check** coming next.")
 else:
     st.info("👆 Enter at least one window type above (with width, height, and qty > 0) to see the summary.")
