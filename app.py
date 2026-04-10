@@ -93,7 +93,6 @@ with imp_col:
             import pandas as pd
             df_upload = pd.read_excel(uploaded, sheet_name="TKO", header=2, skiprows=[3])
             df_upload.columns = df_upload.columns.str.strip()
-            # Normalize column names
             col_map = {
                 "Item #": "item_num", "Item Name": "item",
                 "Width (in)": "width_in", "Height (in)": "height_in",
@@ -105,29 +104,47 @@ with imp_col:
                 "Glazing Type": "glazing_type", "Glazing $/SF": "glazing_price"
             }
             df_upload = df_upload.rename(columns=col_map)
+
+            # Force numeric types, coerce bad values to NaN
+            for col in ["width_in", "height_in", "qty", "glazing_price"]:
+                if col in df_upload.columns:
+                    df_upload[col] = pd.to_numeric(df_upload[col], errors="coerce")
+
+            # Drop rows missing required fields or with zero/null qty
             df_upload = df_upload.dropna(subset=["width_in", "height_in", "qty"])
             df_upload = df_upload[df_upload["qty"] > 0]
+            df_upload = df_upload[df_upload["width_in"] > 0]
+            df_upload = df_upload[df_upload["height_in"] > 0]
+
+            def yn(val, default=True):
+                if isinstance(val, str):
+                    return val.strip().lower() == "yes"
+                if pd.isna(val):
+                    return default
+                return bool(val)
+
+            def safe_str(val, default):
+                if pd.isna(val) if not isinstance(val, str) else False:
+                    return default
+                s = str(val).strip()
+                return s if s else default
 
             new_rows = []
             for _, r in df_upload.iterrows():
-                def yn(val, default=True):
-                    if isinstance(val, str):
-                        return val.strip().lower() == "yes"
-                    return bool(default)
                 new_rows.append({
-                    "item":          str(r.get("item", r.get("item_num", "SWR-?"))),
-                    "width_in":      float(r.get("width_in", 0)),
-                    "height_in":     float(r.get("height_in", 0)),
-                    "qty":           int(r.get("qty", 0)),
-                    "system":        str(r.get("system", "SWR")),
-                    "finish":        str(r.get("finish", "Painted")),
-                    "color":         str(r.get("color", "Light")),
-                    "mount":         str(r.get("mount", "Overlap-mount")),
-                    "head_ret":      yn(r.get("head_ret", "yes")),
-                    "sill_ret":      yn(r.get("sill_ret", "yes")),
-                    "jamb_sp":       yn(r.get("jamb_sp", "no"), default=False),
-                    "glazing_type":  str(r.get("glazing_type", "VIG")),
-                    "glazing_price": float(r.get("glazing_price", 20)),
+                    "item":          safe_str(r.get("item", r.get("item_num", "")), "SWR-?"),
+                    "width_in":      float(r["width_in"]),
+                    "height_in":     float(r["height_in"]),
+                    "qty":           int(r["qty"]),
+                    "system":        safe_str(r.get("system"), "SWR"),
+                    "finish":        safe_str(r.get("finish"), "Painted"),
+                    "color":         safe_str(r.get("color"), "Light"),
+                    "mount":         safe_str(r.get("mount"), "Overlap-mount"),
+                    "head_ret":      yn(r.get("head_ret"), default=True),
+                    "sill_ret":      yn(r.get("sill_ret"), default=True),
+                    "jamb_sp":       yn(r.get("jamb_sp"), default=False),
+                    "glazing_type":  safe_str(r.get("glazing_type"), "VIG"),
+                    "glazing_price": float(r.get("glazing_price", 20) or 20),
                 })
 
             if new_rows:
