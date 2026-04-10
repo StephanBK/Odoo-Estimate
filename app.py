@@ -51,15 +51,15 @@ st.caption("Phase 1 — Window Takeoff (TKO)")
 st.subheader("Project Info")
 col1, col2, col3, col4, col5 = st.columns([3, 2, 1.5, 1.5, 1.5])
 with col1:
-    project_name = st.text_input("Project Name", placeholder="e.g. Baystate Medical Center")
+    project_name = st.text_input("Project Name")
 with col2:
-    customer     = st.text_input("Customer", placeholder="e.g. LuxWall")
+    customer     = st.text_input("Customer")
 with col3:
     est_date     = st.date_input("Estimate Date", value=date.today())
 with col4:
-    est_by       = st.text_input("Estimated By", placeholder="e.g. AG")
+    est_by       = st.text_input("Estimated By")
 with col5:
-    reviewed_by  = st.text_input("Reviewed By", placeholder="e.g. AK")
+    reviewed_by  = st.text_input("Reviewed By")
 
 st.divider()
 
