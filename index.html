@@ -40,6 +40,7 @@
 
   /* Forms */
   .grid-5{display:grid;grid-template-columns:2.5fr 1.5fr 1fr 1fr 1fr;gap:12px;}
+  .grid-4{display:grid;grid-template-columns:2.5fr 1.5fr 1fr 1fr;gap:12px;}
   .cost-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;}
   .cost-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
   .field{display:flex;flex-direction:column;gap:4px;}
@@ -173,12 +174,11 @@
   <div class="card">
     <div class="card-title" onclick="tog('projC',this)">Project Info <span class="tog">▾</span></div>
     <div class="collapsible" id="projC">
-      <div class="grid-5">
+      <div class="grid-4">
         <div><label>Project Name</label><input type="text" id="projectName"></div>
         <div><label>Customer</label><input type="text" id="customer"></div>
         <div><label>Estimate Date</label><input type="date" id="estDate"></div>
         <div><label>Estimated By</label><input type="text" id="estBy"></div>
-        <div><label>Reviewed By</label><input type="text" id="reviewedBy"></div>
       </div>
     </div>
   </div>
