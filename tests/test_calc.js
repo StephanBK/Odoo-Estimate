@@ -233,13 +233,16 @@ test('estimateQty: zero panels → 0', () => {
   assert.equal(CALC.estimateQty({ name: 'foam', ref: '' }, { panels: 0 }), 0);
 });
 
-test('estimateQty: foam baffle uses perimH/2 formula', () => {
-  // perimH = 6 ft (one panel 36" wide × 1 qty: 2×3 = 6)
-  // formula: ceil((perimH/2) / (9 × 0.8)) = ceil(3 / 7.2) = ceil(0.4167) = 1
+test('estimateQty: foam baffle (1/4 x 1/2 → overlap mount) via rule table', () => {
+  // Chunk 3 update: foam products now route through material_rules.json.
+  // Product name contains "1/4 x 1/2" → matches foam-overlap-mount rule.
+  // 1 overlap-mount panel 36"x60": perimOverlap = 2×(3+5) = 16 ft.
+  // foam-overlap-mount formula: perimOverlap / (9 × 0.8) = 16 / 7.2 = 2.22 → ceil = 3.
   const t = CALC.getTotals([{
-    width: 36, height: 60, qty: 1, headRet: true, sillRet: true
+    width: 36, height: 60, qty: 1, headRet: true, sillRet: true,
+    mount: 'Overlap-mount'
   }]);
-  assert.equal(CALC.estimateQty({ name: '48PPI Foam Baffle 1/4x1/2', ref: '' }, t), 1);
+  assert.equal(CALC.estimateQty({ name: '48PPI Foam Baffle 1/4 x 1/2', ref: '' }, t), 3);
 });
 
 test('estimateQty: corner keys returns t.corners directly', () => {
@@ -257,4 +260,147 @@ test('estimateQty: setting block returns t.setblks directly', () => {
 test('estimateQty: unmatched name falls back to t.panels', () => {
   const t = CALC.getTotals([{ width: 36, height: 60, qty: 7 }]);
   assert.equal(CALC.estimateQty({ name: 'Unknown Item XYZ', ref: '' }, t), 7);
+});
+
+// ── Mount-aware totals (Chunk 3) ────────────────────────────────────────
+test('getTotals: mount-aware perim aggregation (overlap)', () => {
+  // 36x60 overlap, qty 2: perim per panel = 16ft, x2 = 32ft → perimOverlap = 32
+  const t = CALC.getTotals([
+    { width: 36, height: 60, qty: 2, mount: 'Overlap-mount' }
+  ]);
+  assert.equal(t.perimOverlap, 32);
+  assert.equal(t.perimInset, 0);
+});
+
+test('getTotals: mount-aware perim aggregation (inset)', () => {
+  const t = CALC.getTotals([
+    { width: 36, height: 60, qty: 2, mount: 'Inset-mount', headRet: true }
+  ]);
+  assert.equal(t.perimInset, 32);
+  assert.equal(t.perimOverlap, 0);
+  // headFtInset: 36/12 ft × 2 qty = 6 ft
+  assert.equal(t.headFtInset, 6);
+  assert.equal(t.headFtOverlap, 0);
+});
+
+test('getTotals: mixed overlap + inset', () => {
+  const t = CALC.getTotals([
+    { width: 36, height: 60, qty: 1, mount: 'Overlap-mount' },  // perim 16
+    { width: 48, height: 60, qty: 1, mount: 'Inset-mount'   }   // perim = 2×(4+5) = 18
+  ]);
+  assert.equal(t.perimOverlap, 16);
+  assert.equal(t.perimInset, 18);
+});
+
+// ── Rule table (Chunk 3) ────────────────────────────────────────────────
+// Load rules from disk before testing
+const fs = require('node:fs');
+const path = require('node:path');
+const RULES = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'material_rules.json'), 'utf8'));
+CALC._setRulesForTesting(RULES);
+
+test('rule lookup: setblock Orazen Black 4140-01-01 → setblks', () => {
+  const t = CALC.getTotals([{ width: 36, height: 60, qty: 10 }]);
+  // setblks = ceil(2.3 × 10) = 23
+  const result = CALC.qtyByRuleVerbose({ name: 'Gasket SWR Setblock Black', ref: '4140-01-01' }, t);
+  assert.equal(result.source, 'rule');
+  assert.equal(result.ruleId, 'setblock-orazen-black');
+  assert.equal(result.qty, 23);
+});
+
+test('rule lookup: setblock Orazen Gray 4173-01-02 → setblks', () => {
+  const t = CALC.getTotals([{ width: 36, height: 60, qty: 5 }]);
+  // setblks = ceil(2.3 × 5) = ceil(11.5) = 12
+  const result = CALC.qtyByRuleVerbose({ name: 'Setblock Gray', ref: '4173-01-02' }, t);
+  assert.equal(result.source, 'rule');
+  assert.equal(result.qty, 12);
+});
+
+test('rule lookup: setblock USAluminum NP430 → setblks', () => {
+  const t = CALC.getTotals([{ width: 36, height: 60, qty: 3 }]);
+  // setblks = ceil(2.3 × 3) = ceil(6.9) = 7
+  const result = CALC.qtyByRuleVerbose({ name: 'NP430', ref: 'NP430' }, t);
+  assert.equal(result.source, 'rule');
+  assert.equal(result.ruleId, 'setblock-usaluminum-np430');
+  assert.equal(result.qty, 7);
+});
+
+test('rule lookup: foam by name pattern uses overlap perimeter', () => {
+  // 10 panels overlap-mount, perim per panel = 2×(3+5) = 16ft → perimOverlap = 160
+  // foam-generic-fallback: (perimOverlap + perimInset) / (9 × 0.8) = 160 / 7.2 = 22.22 → ceil = 23
+  // BUT foam-overlap-mount pattern "foam.*1/?4.*x.*1/?2|foam.*overlap" might match first.
+  // Product name "Foam 48PPI 0.5x0.5x9' reticulated foam" → doesn't include "overlap" or "1/4 x 1/2"
+  // → won't match foam-overlap-mount. Will match foam-inset-mount pattern "foam\s*48ppi\s*0?\.?5" → no, that's inset.
+  // Actually "Foam 48PPI 0.5x0.5x9'" → matches "foam\s*48ppi\s*0?\.?5" → foam-inset-mount.
+  // perimInset = 0 here → qty = 0.
+  const t = CALC.getTotals([
+    { width: 36, height: 60, qty: 10, mount: 'Overlap-mount' }
+  ]);
+  const result = CALC.qtyByRuleVerbose({ name: "Foam 48PPI 0.5\"x0.5\"x9' reticulated foam", ref: 'INOV-201' }, t);
+  // The 48PPI 0.5 product matches foam-inset-mount rule; with all-overlap TKO, inset perim = 0.
+  assert.equal(result.source, 'rule');
+  assert.equal(result.ruleId, 'foam-inset-mount');
+  assert.equal(result.qty, 0);  // no inset panels → no foam needed for inset purpose
+});
+
+test('rule lookup: foam with INSET-mount panels gets correct qty', () => {
+  // 10 panels inset-mount → perimInset = 160
+  // foam-inset-mount: perimInset / (9 × 0.8) = 160 / 7.2 = 22.22 → ceil = 23
+  const t = CALC.getTotals([
+    { width: 36, height: 60, qty: 10, mount: 'Inset-mount' }
+  ]);
+  const result = CALC.qtyByRuleVerbose({ name: "Foam 48PPI 0.5\"x0.5\"x9' reticulated foam", ref: 'INOV-201' }, t);
+  assert.equal(result.ruleId, 'foam-inset-mount');
+  assert.equal(result.qty, 23);
+});
+
+test('rule lookup: glazing tape GT106 uses headFtInset', () => {
+  // 10 inset-mount panels with headRet=true → headFtInset = 36/12 × 10 = 30 ft
+  // formula: headFtInset / (100 × 0.9091) = 30 / 90.91 = 0.330 → ceil = 1
+  const t = CALC.getTotals([
+    { width: 36, height: 60, qty: 10, mount: 'Inset-mount', headRet: true }
+  ]);
+  const result = CALC.qtyByRuleVerbose({ name: 'CRL Butyl Tape', ref: 'GT106' }, t);
+  assert.equal(result.source, 'rule');
+  assert.equal(result.ruleId, 'glazing-tape-inset-head-retainer');
+  assert.equal(result.qty, 1);
+});
+
+test('rule lookup: glazing tape GT106 with no inset panels → qty 0', () => {
+  // All overlap-mount → headFtInset = 0 → qty = 0
+  const t = CALC.getTotals([
+    { width: 36, height: 60, qty: 10, mount: 'Overlap-mount', headRet: true }
+  ]);
+  const result = CALC.qtyByRuleVerbose({ name: 'CRL Butyl Tape', ref: 'GT106' }, t);
+  assert.equal(result.qty, 0);
+  assert.equal(result.ruleId, 'glazing-tape-inset-head-retainer');
+});
+
+test('rule lookup: unmatched product falls back to legacy heuristic', () => {
+  const t = CALC.getTotals([{ width: 36, height: 60, qty: 7 }]);
+  const result = CALC.qtyByRuleVerbose({ name: 'Random Mystery Item', ref: 'XYZ-999' }, t);
+  assert.equal(result.source, 'fallback');
+  assert.equal(result.ruleId, null);
+  assert.equal(result.qty, 7);  // falls through to t.panels default
+});
+
+test('rule lookup: exact code beats name pattern when both could match', () => {
+  // 4140-01-01 has both default_code rule (setblock-orazen-black) AND
+  // a product name containing "foam" would NOT match here — we test code wins.
+  const t = CALC.getTotals([{ width: 36, height: 60, qty: 10 }]);
+  // Send a product where the NAME would also match a different pattern,
+  // but the code matches the setblock rule exactly.
+  const result = CALC.qtyByRuleVerbose(
+    { name: 'Confusingly named foam setblock thing', ref: '4140-01-01' }, t
+  );
+  assert.equal(result.ruleId, 'setblock-orazen-black');
+  assert.equal(result.qty, 23);  // setblks, not the foam formula
+});
+
+test('estimateQty back-compat: returns just qty (no rule metadata)', () => {
+  // Confirm the old single-return-value signature still works.
+  const t = CALC.getTotals([{ width: 36, height: 60, qty: 10 }]);
+  const qty = CALC.estimateQty({ name: 'Setblock', ref: '4140-01-01' }, t);
+  assert.equal(typeof qty, 'number');
+  assert.equal(qty, 23);
 });

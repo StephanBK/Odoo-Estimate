@@ -1,0 +1,76 @@
+{
+  "_schema": {
+    "description": "Per-product material qty rules. Each rule specifies how to compute a default quantity from TKO totals when the user adds the product to a project. Users can always override the calculated qty manually.",
+    "match_priority": "1. Exact default_code match (case-insensitive). 2. First name_pattern match. 3. Fallback to legacy estimateQty().",
+    "formula_fields": "totals keys available: panels, area, perim, perimH, perimV, headFt, sillFt, jambFt, corners, setblks, dlJambs, spJambs, perimOverlap, perimInset, headFtInset, headFtOverlap.",
+    "rounding": "All formulas wrap in Math.ceil() automatically — config should specify raw demand."
+  },
+  "rules": [
+    {
+      "id": "setblock-orazen-black",
+      "description": "Orazen Setblock Black (EST-1 row 97). One setblock per setblks count.",
+      "default_code": "4140-01-01",
+      "formula": "setblks"
+    },
+    {
+      "id": "setblock-orazen-black-stackable",
+      "description": "Orazen Stackable Setblock Black (EST-1 row 97 stacked).",
+      "default_code": "4141-01-01",
+      "formula": "setblks"
+    },
+    {
+      "id": "setblock-orazen-gray",
+      "description": "Orazen Setblock Gray (EST-1 row 98).",
+      "default_code": "4173-01-02",
+      "formula": "setblks"
+    },
+    {
+      "id": "setblock-orazen-gray-stackable",
+      "description": "Orazen Stackable Setblock Gray (EST-1 row 98 stacked).",
+      "default_code": "4174-01-02",
+      "formula": "setblks"
+    },
+    {
+      "id": "setblock-generic-epdm",
+      "description": "Generic EPDM 1/4 x 1/16 x 4 setblock.",
+      "default_code": "00227253SA4",
+      "formula": "setblks"
+    },
+    {
+      "id": "setblock-usaluminum-np430",
+      "description": "USAluminum NP430 setblock.",
+      "default_code": "NP430",
+      "formula": "setblks"
+    },
+    {
+      "id": "foam-overlap-mount",
+      "description": "Foam baffle, overlap-mount use case (EST-1 row 89, 1/4 x 1/2 cross-section). Quantity = perimeter of overlap-mount panels / (9ft per roll x 0.8 utilization).",
+      "name_pattern": "foam.*1/?4.*x.*1/?2|foam.*overlap",
+      "formula": "perimOverlap / (9 * 0.8)"
+    },
+    {
+      "id": "foam-head-retainer",
+      "description": "Foam baffle, head retainer use case (EST-1 row 90, 1 x 1/2 cross-section). Quantity = head retainer length / (9ft per roll x 0.8 utilization).",
+      "name_pattern": "foam.*1\\\"?\\s*x.*1/?2|foam.*head\\s*retainer",
+      "formula": "headFt / (9 * 0.8)"
+    },
+    {
+      "id": "foam-inset-mount",
+      "description": "Foam baffle, inset-mount use case (EST-1 row 91, 1/2 x 1/2 cross-section). Quantity = perimeter of inset-mount panels / (9ft per roll x 0.8 utilization).",
+      "name_pattern": "foam.*inset|foam\\s*48ppi\\s*0?\\.?5",
+      "formula": "perimInset / (9 * 0.8)"
+    },
+    {
+      "id": "foam-generic-fallback",
+      "description": "Generic foam fallback when no mount-specific match. Quantity = total perimeter (overlap + inset) / (9ft per roll x 0.8 utilization). Conservative: covers any mount type.",
+      "name_pattern": "foam|baffle",
+      "formula": "(perimOverlap + perimInset) / (9 * 0.8)"
+    },
+    {
+      "id": "glazing-tape-inset-head-retainer",
+      "description": "Glazing tape for head retainer, inset-mount only (EST-1 row 96, 1/8 x 1). Quantity = head retainer length on inset-mount panels / (100ft per roll x ~0.91 utilization). If no inset panels in TKO, qty = 0 and user can override.",
+      "default_code": "GT106",
+      "formula": "headFtInset / (100 * 0.9091)"
+    }
+  ]
+}

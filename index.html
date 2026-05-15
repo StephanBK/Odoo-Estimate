@@ -6,6 +6,14 @@
 <title>INOVUES Estimator</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="calc.js"></script>
+<script>
+  // Load material rules at page startup. Until they're loaded, qty estimates
+  // fall back to the legacy heuristic — that's an intentional safe default.
+  fetch('material_rules.json')
+    .then(r => r.json())
+    .then(rules => { window.MATERIAL_RULES = rules; if (window.recalcMats) window.recalcMats(); })
+    .catch(err => { console.warn('material_rules.json not loaded, using fallback heuristic:', err); });
+</script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap');
   :root {
@@ -613,8 +621,10 @@ function doSearch(q) {
 function addMaterial(p) {
   if (matRows.find(m => m.odooId === p.id)) { showToast('Already added.','error'); return; }
   const t = getTotals();
+  const v = CALC.qtyByRuleVerbose(p, t);
   matRows.push({ odooId:p.id, name:p.name, ref:p.ref, supplier:p.category, uom:p.uom,
-    calcQty:estimateQty(p,t), overQty:'', onHand:p.onHand, cost:p.cost, shipPct:5 });
+    calcQty:v.qty, ruleId:v.ruleId, source:v.source,
+    overQty:'', onHand:p.onHand, cost:p.cost, shipPct:5 });
   document.getElementById('searchDD').classList.remove('open');
   document.getElementById('matSearch').value = '';
   renderMaterials();
@@ -630,9 +640,15 @@ function estimateQty(p, t) {
 
 function recalcMats() {
   const t = getTotals();
-  matRows.forEach(m => { m.calcQty = estimateQty({name:m.name,ref:m.ref}, t); });
+  matRows.forEach(m => {
+    const v = CALC.qtyByRuleVerbose({name:m.name, ref:m.ref}, t);
+    m.calcQty = v.qty;
+    m.ruleId = v.ruleId;
+    m.source = v.source;
+  });
   renderMaterials();
 }
+window.recalcMats = recalcMats;  // expose so the async rules-loader can call it
 
 function getMatTotal() {
   return matRows.reduce((s,m) => {
@@ -659,7 +675,14 @@ function renderMaterials() {
     const dCls  = delta>0?'delta-need':'delta-ok';
     return `<tr>
       <td>${esc(m.name)}</td><td>${esc(m.supplier)}</td><td>${esc(m.ref||'—')}</td>
-      <td>${m.calcQty}</td>
+      <td>
+        ${m.calcQty}
+        ${m.ruleId
+          ? `<div style="font-size:9px;color:var(--success);font-family:'DM Mono',monospace;margin-top:2px" title="Matched rule: ${esc(m.ruleId)}">▸ ${esc(m.ruleId)}</div>`
+          : (m.source === 'fallback'
+              ? `<div style="font-size:9px;color:var(--muted2);font-family:'DM Mono',monospace;margin-top:2px" title="No rule matched — using legacy heuristic. Verify the qty.">▸ fallback</div>`
+              : '')}
+      </td>
       <td><input type="number" value="${m.overQty}" min="0" placeholder="${m.calcQty}"
           oninput="matRows[${i}].overQty=this.value===''?'':+this.value;renderMaterials();calcAll()"
           style="width:65px;text-align:center;font-family:'DM Mono',monospace;font-size:12px;padding:3px 6px"></td>
