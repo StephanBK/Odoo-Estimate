@@ -144,6 +144,42 @@ test('calcShip: edge case — exact multiples', () => {
   assert.equal(out, 3500);
 });
 
+// ── calcShip LTL mode (Chunk 2) ─────────────────────────────────────────
+test('calcShip LTL: flat price + margin', () => {
+  // mode=ltl, ltlPrice=500, margin 10% → 550. FTL fields ignored.
+  const out = CALC.calcShip({
+    mode: 'ltl', panels: 4, ltlPrice: 500, margin: 0.1,
+    rackCost: 999, panelsPerRack: 999, freight: 999, racksPerTruck: 999
+  });
+  assert.equal(r(out), 550);
+});
+
+test('calcShip LTL: zero panels still returns 0', () => {
+  // Same as FTL: no panels = no shipping cost regardless of mode.
+  const out = CALC.calcShip({
+    mode: 'ltl', panels: 0, ltlPrice: 500, margin: 0.1
+  });
+  assert.equal(out, 0);
+});
+
+test('calcShip LTL: zero margin = passthrough', () => {
+  // Mockup case: user types $850, no margin, should be exactly $850.
+  const out = CALC.calcShip({
+    mode: 'ltl', panels: 2, ltlPrice: 850, margin: 0
+  });
+  assert.equal(out, 850);
+});
+
+test('calcShip: missing mode falls back to FTL (back-compat)', () => {
+  // Old call signature without `mode` field still works as FTL.
+  // Same inputs as the 50-panels FTL test above; same expected output.
+  const out = CALC.calcShip({
+    panels: 50, rackCost: 250, panelsPerRack: 30,
+    freight: 3000, racksPerTruck: 14, margin: 0.1
+  });
+  assert.equal(r(out), 3850);
+});
+
 // ── calcEquip ───────────────────────────────────────────────────────────
 test('calcEquip: only on:true lines count', () => {
   // 800×2 (on) + 50×4 (on) + 500×1 (off, ignored) = 1800. margin 0 → 1800.

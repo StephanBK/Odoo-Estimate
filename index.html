@@ -248,6 +248,24 @@
 <div class="page" id="page2">
 <div class="container">
 
+  <!-- Project Mode (Chunk 2) -->
+  <div class="card" style="border-left:4px solid var(--accent)">
+    <div class="card-title">Project Mode</div>
+    <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:500">
+        <input type="radio" name="projectMode" value="full" id="projModeFull" checked onchange="setProjectMode('full')">
+        Full Project
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:500">
+        <input type="radio" name="projectMode" value="mockup" id="projModeMockup" onchange="setProjectMode('mockup')">
+        Mockup
+      </label>
+      <span id="projModeNote" class="small-note" style="margin:0;flex:1;min-width:280px">
+        Full-scale project: FTL shipping, standard cost lines.
+      </span>
+    </div>
+  </div>
+
   <!-- Fabrication -->
   <div class="card">
     <div class="card-title" onclick="tog('fabC',this)">Fabrication <span class="tog">▾</span></div>
@@ -325,6 +343,15 @@
     <div class="card-title" onclick="tog('shipC',this)">Shipping <span class="tog">▾</span></div>
     <div class="collapsible" id="shipC">
       <div class="cost-grid">
+        <div class="field"><label>Mode</label>
+          <select id="shipMode" onchange="onShipModeChange()">
+            <option value="ftl">FTL (full truckload)</option>
+            <option value="ltl">LTL (less-than-truckload)</option>
+          </select>
+        </div>
+        <div class="field"><label>Margin %</label><input type="number" id="shipMargin" value="10" step="0.5" min="0"></div>
+      </div>
+      <div id="shipFTLFields" class="cost-grid" style="margin-top:12px">
         <div class="field"><label>Rack Type</label>
           <select id="shipRack">
             <option value="lframe">L-Frame Rack</option>
@@ -336,7 +363,9 @@
         <div class="field"><label>Panels per Rack</label><input type="number" id="shipPanPerRack" value="30" step="1"></div>
         <div class="field"><label>Freight per Truck ($)</label><input type="number" id="shipFreight" value="3000" step="100"></div>
         <div class="field"><label>Racks per Truck</label><input type="number" id="shipRackPerTruck" value="14" step="1"></div>
-        <div class="field"><label>Margin %</label><input type="number" id="shipMargin" value="10" step="0.5" min="0"></div>
+      </div>
+      <div id="shipLTLFields" class="cost-grid" style="margin-top:12px;display:none">
+        <div class="field"><label>LTL Price ($)</label><input type="number" id="shipLtlPrice" value="500" step="50" min="0"></div>
       </div>
       <div class="section-total"><span class="lbl">Total Shipping</span><span class="val" id="shipTotal">$0.00</span></div>
     </div>
@@ -733,6 +762,34 @@ document.getElementById('travelOn').addEventListener('change', function() {
   calcAll();
 });
 
+// ── Project Mode + Ship Mode toggles (Chunk 2) ────────────────────────────────
+function onShipModeChange() {
+  const mode = document.getElementById('shipMode').value;
+  document.getElementById('shipFTLFields').style.display = (mode === 'ftl') ? '' : 'none';
+  document.getElementById('shipLTLFields').style.display = (mode === 'ltl') ? '' : 'none';
+  calcAll();
+}
+
+function setProjectMode(mode) {
+  const note = document.getElementById('projModeNote');
+  const shipMode = document.getElementById('shipMode');
+  // Locate the Visual/Performance Mockup line (case-insensitive substring match
+  // so a renamed line still gets caught).
+  const mockupIdx = otherLines.findIndex(l => /mockup/i.test(l.name || ''));
+
+  if (mode === 'mockup') {
+    shipMode.value = 'ltl';
+    if (mockupIdx >= 0) otherLines[mockupIdx].on = true;
+    note.textContent = 'Mockup: LTL shipping + Visual/Performance Mockup line auto-enabled. You can override any field manually.';
+  } else {
+    shipMode.value = 'ftl';
+    if (mockupIdx >= 0) otherLines[mockupIdx].on = false;
+    note.textContent = 'Full-scale project: FTL shipping, standard cost lines.';
+  }
+  onShipModeChange();
+  renderOther();   // re-render so the mockup-line checkbox visually updates
+}
+
 // Wire all number/select inputs on page2 to calcAll
 document.getElementById('page2').addEventListener('input', calcAll);
 document.getElementById('page2').addEventListener('change', calcAll);
@@ -772,9 +829,11 @@ function calcInst() {
 function calcShip() {
   const t = getTotals();
   const total = CALC.calcShip({
+    mode: document.getElementById('shipMode').value,
     panels: t.panels,
     rackCost: gv('shipRackCost'), panelsPerRack: gv('shipPanPerRack'),
     freight: gv('shipFreight'), racksPerTruck: gv('shipRackPerTruck'),
+    ltlPrice: gv('shipLtlPrice'),
     margin: gv('shipMargin')/100
   });
   document.getElementById('shipTotal').textContent = '$'+fmt(total);

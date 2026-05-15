@@ -87,21 +87,34 @@
   }
 
   // ── Shipping ────────────────────────────────────────────────────────────
-  // Current behaviour (FTL only): racks×rackCost + trucks×freight
-  // racks   = ceil(panels / panelsPerRack)
-  // trucks  = ceil(racks  / racksPerTruck)
-  // Total = base × (1+margin)
-  function calcShip({ panels, rackCost, panelsPerRack, freight, racksPerTruck, margin }) {
+  // Two modes:
+  //   mode='ftl' (default): racks×rackCost + trucks×freight
+  //     racks   = ceil(panels / panelsPerRack)
+  //     trucks  = ceil(racks  / racksPerTruck)
+  //   mode='ltl': flat user-entered ltlPrice (typically for mockups, samples,
+  //              or small partial-load shipments).
+  // Margin is applied identically in both modes: total = base × (1+margin).
+  // If mode is omitted, falls back to FTL behavior (back-compat).
+  function calcShip({
+    mode, panels, rackCost, panelsPerRack, freight, racksPerTruck,
+    ltlPrice, margin
+  }) {
     panels = +panels || 0;
     if (!panels) return 0;
-    rackCost = +rackCost || 0;
-    panelsPerRack = +panelsPerRack || 1;
-    freight = +freight || 0;
-    racksPerTruck = +racksPerTruck || 1;
     margin = +margin || 0;
-    const racks  = Math.ceil(panels / panelsPerRack);
-    const trucks = Math.ceil(racks / racksPerTruck);
-    const base = racks * rackCost + trucks * freight;
+    let base;
+    if (mode === 'ltl') {
+      base = +ltlPrice || 0;
+    } else {
+      // FTL (default)
+      rackCost = +rackCost || 0;
+      panelsPerRack = +panelsPerRack || 1;
+      freight = +freight || 0;
+      racksPerTruck = +racksPerTruck || 1;
+      const racks  = Math.ceil(panels / panelsPerRack);
+      const trucks = Math.ceil(racks / racksPerTruck);
+      base = racks * rackCost + trucks * freight;
+    }
     return base * (1 + margin);
   }
 
