@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>INOVUES Estimator</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="calc.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap');
   :root {
@@ -542,18 +543,7 @@ function renderSummary() {
 }
 
 function getTotals() {
-  const valid = rows.filter(r => r.qty>0 && r.width>0 && r.height>0);
-  let panels=0,area=0,perimH=0,perimV=0,headFt=0,sillFt=0,jambFt=0,corners=0,setblks=0,dlJambs=0,spJambs=0;
-  for (const r of valid) {
-    const w=r.width/12, h=r.height/12, q=r.qty;
-    panels+=q; area+=w*h*q; perimH+=2*w*q; perimV+=2*h*q;
-    if(r.headRet) headFt+=w*q;
-    if(r.sillRet) sillFt+=w*q;
-    jambFt+=2*h*q; dlJambs+=2*q*3;
-    if(r.jambSp) spJambs+=2*q*3;
-    corners+=4*q; setblks+=Math.ceil(2.3*q);
-  }
-  return {panels,area,perim:perimH+perimV,perimH,perimV,headFt,sillFt,jambFt,corners,setblks,dlJambs,spJambs};
+  return CALC.getTotals(rows.filter(r => r.qty>0 && r.width>0 && r.height>0));
 }
 
 // ── Materials ─────────────────────────────────────────────────────────────────
@@ -606,26 +596,7 @@ function addMaterial(p) {
 function removeMat(i) { matRows.splice(i,1); renderMaterials(); calcAll(); }
 
 function estimateQty(p, t) {
-  if (!t.panels) return 0;
-  const n = (p.name+' '+(p.ref||'')).toLowerCase();
-  if (n.includes('glass')||n.includes('vig')||(!n.includes('spline')&&n.includes(' ig '))) return Math.ceil(t.area);
-  if (n.includes('alum')&&n.includes('profile')) return Math.ceil(t.perim/(16*0.8));
-  if (n.includes('spline')||n.includes('gasket swr')) return Math.ceil(t.perim/0.9);
-  if (n.includes('jamb gasket')) return Math.ceil(t.jambFt/0.952);
-  if (n.includes('corner key')) return t.corners;
-  if (n.includes('dual lock')) return Math.ceil(t.dlJambs/1620);
-  if (n.includes('foam')) return Math.ceil((t.perimH/2)/(9*0.8));
-  if (n.includes('head retainer')) return Math.ceil(t.headFt/(10*0.875));
-  if (n.includes('sill retainer')) return Math.ceil(t.sillFt/(10*0.875));
-  if (n.includes('aftc')) return Math.ceil(t.perim/(54*0.909));
-  if (n.includes('setblock')||n.includes('setting block')) return t.setblks;
-  if (n.includes('desiccant')||n.includes('dessicant')) return Math.ceil(t.panels/900);
-  if (n.includes('protection film')) return Math.ceil((t.area/4)/891);
-  if (n.includes('shipping pad')) return Math.ceil((t.panels*8)/(2700*0.952));
-  if (n.includes('masking tape')) return Math.ceil(t.perim/(180*0.909));
-  if (n.includes('hot melt')||n.includes('butyl')) return Math.ceil(t.perim/(164*0.8));
-  if (n.includes('dymonic')||n.includes('sealant')) return Math.ceil(t.jambFt/(7.6*0.8));
-  return t.panels;
+  return CALC.estimateQty(p, t);
 }
 
 function recalcMats() {
@@ -770,74 +741,67 @@ document.getElementById('page2').addEventListener('change', calcAll);
 function gv(id) { return parseFloat(document.getElementById(id).value) || 0; }
 
 function calcFab() {
-  const t = getTotals(); if (!t.panels) return 0;
-  const rate = gv('fabRate'), lump = gv('fabLump');
-  const hrCut = gv('fabHrCut'), hrAsm = gv('fabHrAsm'), hrCln = gv('fabHrCln');
-  const margin = gv('fabMargin')/100;
-  const base = lump*t.area + (hrCut+hrAsm+hrCln)*rate*t.panels;
-  const total = base*(1+margin);
+  const t = getTotals();
+  const total = CALC.calcFab({
+    rate: gv('fabRate'), lump: gv('fabLump'),
+    hrCut: gv('fabHrCut'), hrAsm: gv('fabHrAsm'), hrCln: gv('fabHrCln'),
+    margin: gv('fabMargin')/100,
+    panels: t.panels, area: t.area
+  });
   document.getElementById('fabTotal').textContent = '$'+fmt(total);
   return total;
 }
 
 function calcInst() {
   const t = getTotals();
-  if (!document.getElementById('instOn').checked || !t.panels) {
-    document.getElementById('instTotal').textContent = '$0.00'; return 0;
-  }
-  const useLump = document.getElementById('instUseLump').checked;
-  const margin = gv('instMargin')/100;
-  let base;
-  if (useLump) {
-    base = gv('instLumpAmt');
-  } else {
-    const rate = gv('instUnion');
-    const hrUnit = gv('instHrUnit'), pmHrs = gv('instPMHrs'), pmRate = gv('instPMRate');
-    const takeoff = document.getElementById('instTakeoffOn').checked ? gv('instTakeoffAmt') : 0;
-    base = rate*hrUnit*t.panels + pmHrs*pmRate + takeoff;
-  }
-  const total = base*(1+margin);
+  const total = CALC.calcInst({
+    on: document.getElementById('instOn').checked,
+    useLump: document.getElementById('instUseLump').checked,
+    lumpAmt: gv('instLumpAmt'),
+    rate: gv('instUnion'), hrUnit: gv('instHrUnit'),
+    pmHrs: gv('instPMHrs'), pmRate: gv('instPMRate'),
+    takeoffOn: document.getElementById('instTakeoffOn').checked,
+    takeoffAmt: gv('instTakeoffAmt'),
+    margin: gv('instMargin')/100,
+    panels: t.panels
+  });
   document.getElementById('instTotal').textContent = '$'+fmt(total);
   return total;
 }
 
 function calcShip() {
-  const t = getTotals(); if (!t.panels) { document.getElementById('shipTotal').textContent='$0.00'; return 0; }
-  const rackCost = gv('shipRackCost'), ppr = gv('shipPanPerRack');
-  const freight = gv('shipFreight'), rpt = gv('shipRackPerTruck');
-  const margin = gv('shipMargin')/100;
-  const racks = Math.ceil(t.panels/ppr);
-  const trucks = Math.ceil(racks/rpt);
-  const base = racks*rackCost + trucks*freight;
-  const total = base*(1+margin);
+  const t = getTotals();
+  const total = CALC.calcShip({
+    panels: t.panels,
+    rackCost: gv('shipRackCost'), panelsPerRack: gv('shipPanPerRack'),
+    freight: gv('shipFreight'), racksPerTruck: gv('shipRackPerTruck'),
+    margin: gv('shipMargin')/100
+  });
   document.getElementById('shipTotal').textContent = '$'+fmt(total);
   return total;
 }
 
 function calcEquip() {
-  const margin = gv('equipMargin')/100;
-  const base = equipLines.filter(e=>e.on).reduce((s,e)=>s+e.rate*e.qty,0);
-  const total = base*(1+margin);
+  const total = CALC.calcEquip({ lines: equipLines, margin: gv('equipMargin')/100 });
   document.getElementById('equipTotal').textContent = '$'+fmt(total);
   return total;
 }
 
 function calcTravel() {
-  if (!document.getElementById('travelOn').checked) { document.getElementById('travelTotal').textContent='$0.00'; return 0; }
-  const daily=gv('trDaily'), days=gv('trDays'), air=gv('trAir'), trips=gv('trTrips');
-  const lodge=gv('trLodge'), meals=gv('trMeals'), car=gv('trCar');
-  const stayDays=gv('trStayDays'), people=gv('trPeople')||1;
-  const margin=gv('travelMargin')/100;
-  const base = daily*days + air*trips*people + lodge*stayDays*people + meals*stayDays*people + car*stayDays;
-  const total = base*(1+margin);
+  const total = CALC.calcTravel({
+    on: document.getElementById('travelOn').checked,
+    daily: gv('trDaily'), days: gv('trDays'),
+    air: gv('trAir'), trips: gv('trTrips'),
+    lodge: gv('trLodge'), meals: gv('trMeals'), car: gv('trCar'),
+    stayDays: gv('trStayDays'), people: gv('trPeople'),
+    margin: gv('travelMargin')/100
+  });
   document.getElementById('travelTotal').textContent = '$'+fmt(total);
   return total;
 }
 
 function calcOther() {
-  const margin = gv('otherMargin')/100;
-  const base = otherLines.filter(e=>e.on).reduce((s,e)=>s+e.amt,0);
-  const total = base*(1+margin);
+  const total = CALC.calcOther({ lines: otherLines, margin: gv('otherMargin')/100 });
   document.getElementById('otherTotal').textContent = '$'+fmt(total);
   return total;
 }
