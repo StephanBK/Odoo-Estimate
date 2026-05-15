@@ -191,6 +191,9 @@
   // source ∈ { "rule", "fallback", "none" }.
   function qtyByRuleVerbose(product, t) {
     if (!t || !t.panels) return { qty: 0, ruleId: null, source: 'none' };
+    // Defensive: callers should pass a product object, but if not, treat as
+    // empty-fields rather than crashing on `null.ref` / `undefined.name`.
+    if (!product || typeof product !== 'object') product = {};
 
     // 1. Try the rule table first.
     const rules = (typeof window !== 'undefined' && window.MATERIAL_RULES)
