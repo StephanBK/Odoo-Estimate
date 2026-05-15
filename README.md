@@ -57,3 +57,4 @@ or adding formulas.
 | `ODOO_DB`       | `inovues`                      |
 | `ODOO_USER`     | `sketterer@inovues.com`        |
 | `ODOO_API_KEY`  | *(your Odoo API key)*          |
+
