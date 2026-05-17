@@ -77,6 +77,37 @@ def search_products(q: str = Query("", min_length=0)):
     ]
 
 
+# ── Bulk fetch by default_code list ───────────────────────────────────────────
+# Used by the preset feature to pull all 21 preset products in one round-trip
+# on app startup, instead of 21 separate /api/products/search calls.
+@app.get("/api/products/by_codes")
+def products_by_codes(codes: str = Query("")):
+    code_list = [c.strip() for c in codes.split(",") if c.strip()]
+    if not code_list:
+        return []
+
+    products = odoo_call("product.product", "search_read",
+        [[["default_code", "in", code_list]]],
+        {
+            "fields": ["name", "default_code", "qty_available",
+                       "uom_id", "categ_id", "standard_price"],
+            "limit": len(code_list) * 2,  # in case of duplicates
+        }
+    )
+    return [
+        {
+            "id":       p["id"],
+            "name":     p["name"],
+            "ref":      p.get("default_code") or "",
+            "onHand":   p.get("qty_available", 0),
+            "uom":      p["uom_id"][1] if p.get("uom_id") else "",
+            "category": p["categ_id"][1] if p.get("categ_id") else "",
+            "cost":     p.get("standard_price", 0),
+        }
+        for p in products
+    ]
+
+
 # ── Stock check ───────────────────────────────────────────────────────────────
 @app.get("/api/products/{product_id}/stock")
 def get_stock(product_id: int):

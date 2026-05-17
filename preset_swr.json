@@ -1,0 +1,240 @@
+{
+  "_schema": {
+    "description": "SWR preset materials \u2014 auto-added to matRows when TKO conditions are met.",
+    "condition_keys": "system, finishType, color, glazing, mount, headRet, sillRet, jambSp (all in sheet vocabulary; use preset_translate.js to convert from app vocabulary)",
+    "always_present": "True = added regardless of TKO conditions"
+  },
+  "rules": [
+    {
+      "est1_row": 66,
+      "description": "Alum SWR Profile 03110 Clear Anodized",
+      "odoo_default_code": "03002BA (03110BA)",
+      "conditions": {
+        "system": "SWR",
+        "finishType": "anodize",
+        "color": "light",
+        "glazing": "single-pane"
+      },
+      "always_present": false,
+      "status": "LOCKED"
+    },
+    {
+      "est1_row": 75,
+      "description": "Alum SWR-VIG Profile 03310 (03004) Clear Anodized",
+      "odoo_default_code": "03004CA (03310CA)",
+      "conditions": {
+        "system": "SWR",
+        "finishType": "anodize",
+        "color": "light",
+        "glazing": "VIG"
+      },
+      "always_present": false,
+      "status": "LOCKED"
+    },
+    {
+      "est1_row": 76,
+      "description": "Alum SWR-VIG Profile 03310 (03004) Black Anodized",
+      "odoo_default_code": "03004BA (03310BA)",
+      "conditions": {
+        "system": "SWR",
+        "finishType": "anodize",
+        "color": "dark",
+        "glazing": "VIG"
+      },
+      "always_present": false,
+      "status": "LOCKED"
+    },
+    {
+      "est1_row": 80,
+      "description": "SWR 5mm Glazing Spline EPDM Black (4212-01-00)",
+      "odoo_default_code": "4212-01-00",
+      "conditions": {
+        "system": "SWR",
+        "glazing": "single-pane"
+      },
+      "always_present": false,
+      "status": "LOCKED"
+    },
+    {
+      "est1_row": 81,
+      "description": "SWR Glazing Spline Black",
+      "odoo_default_code": "D752BLC",
+      "conditions": {
+        "system": "SWR",
+        "glazing": "single-pane"
+      },
+      "always_present": false,
+      "status": "LIKELY"
+    },
+    {
+      "est1_row": 83,
+      "description": "SWR-VIG 10mm Glazing Spline EPDM Black (3763-01-00)",
+      "odoo_default_code": "3763-01-00",
+      "conditions": {
+        "system": "SWR",
+        "glazing": "VIG"
+      },
+      "always_present": false,
+      "status": "LOCKED"
+    },
+    {
+      "est1_row": 84,
+      "description": "SWR-VIG 8mm Glazing Spline Black (4194-01-00)",
+      "odoo_default_code": "4194-01-00",
+      "conditions": {
+        "system": "SWR",
+        "glazing": "VIG"
+      },
+      "always_present": false,
+      "status": "LOCKED"
+    },
+    {
+      "est1_row": 85,
+      "description": "Jamb Gasket Black (4003-02-00)",
+      "odoo_default_code": "4003-02-00",
+      "conditions": {
+        "system": "SWR",
+        "color": "dark"
+      },
+      "always_present": false,
+      "status": "LOCKED"
+    },
+    {
+      "est1_row": 86,
+      "description": "Jamb Gasket Gray (4172-02-01)",
+      "odoo_default_code": "4172-02-01",
+      "conditions": {
+        "system": "SWR",
+        "color": "light"
+      },
+      "always_present": false,
+      "status": "LOCKED"
+    },
+    {
+      "est1_row": 87,
+      "description": "Diecast Corner Keys (46-124)",
+      "odoo_default_code": "46-124",
+      "conditions": {
+        "system": "SWR"
+      },
+      "always_present": false,
+      "status": "LOCKED"
+    },
+    {
+      "est1_row": 88,
+      "description": "3M Dual Lock 1/2\" x 300' (SJ3550CF)",
+      "odoo_default_code": "SJ3550CF",
+      "conditions": {},
+      "always_present": true,
+      "status": "LOCKED"
+    },
+    {
+      "est1_row": 91,
+      "description": "48PPI foam baffle 1/2\" x 1/2\" (inset mount only)",
+      "odoo_default_code": "98063",
+      "conditions": {
+        "mount": "inset-mount",
+        "headRet": "no"
+      },
+      "always_present": false,
+      "status": "LIKELY"
+    },
+    {
+      "est1_row": 92,
+      "description": "Head Retainer CRL Part #D336DU",
+      "odoo_default_code": "20189",
+      "conditions": {
+        "headRet": "yes"
+      },
+      "always_present": false,
+      "status": "LIKELY"
+    },
+    {
+      "est1_row": 93,
+      "description": "Sill Retainer CRL Part #WU3DUSL",
+      "odoo_default_code": "WU3DUSL",
+      "conditions": {
+        "sillRet": "yes"
+      },
+      "always_present": false,
+      "status": "LOCKED"
+    },
+    {
+      "est1_row": 94,
+      "description": "AFTC 1\" for head retainer",
+      "odoo_default_code": "INOV-159",
+      "conditions": {
+        "headRet": "yes"
+      },
+      "always_present": false,
+      "status": "LIKELY"
+    },
+    {
+      "est1_row": 95,
+      "description": "AFTC 1\" for sill retainer",
+      "odoo_default_code": "INOV-159",
+      "conditions": {
+        "sillRet": "yes"
+      },
+      "always_present": false,
+      "status": "LIKELY"
+    },
+    {
+      "est1_row": 97,
+      "description": "Black EPDM Setting Blocks + head stoppers for inset no head retainer (4140-01-01+4141-01-01)",
+      "odoo_default_code": "4140-01-01",
+      "conditions": {
+        "system": "SWR",
+        "color": "dark",
+        "mount": "inset-mount",
+        "headRet": "no"
+      },
+      "always_present": false,
+      "status": "LIKELY"
+    },
+    {
+      "est1_row": 98,
+      "description": "Gray Silicone Setting Blocks + head stoppers for inset no head retainer (4173-01-02+4174-01-02)",
+      "odoo_default_code": "4173-01-02",
+      "conditions": {
+        "system": "SWR",
+        "color": "light",
+        "mount": "inset-mount",
+        "headRet": "no"
+      },
+      "always_present": false,
+      "status": "LIKELY"
+    },
+    {
+      "est1_row": 99,
+      "description": "Standoff plate for Dual lock  (inset mount only)",
+      "odoo_default_code": "INOV-208",
+      "conditions": {
+        "mount": "inset-mount"
+      },
+      "always_present": false,
+      "status": "LIKELY"
+    },
+    {
+      "est1_row": 102,
+      "description": "Glass Protection Film Nitto Blue 48\" x 990'",
+      "odoo_default_code": "5057A5",
+      "conditions": {
+        "system": "SWR",
+        "glazingMat": "PMMA"
+      },
+      "always_present": false,
+      "status": "LIKELY"
+    },
+    {
+      "est1_row": 103,
+      "description": "CRL Super Duty Shipping Pads - 1 1/2\"x1 1/2\"x1/2\" (2700 pads/box)",
+      "odoo_default_code": "NSP121515",
+      "conditions": {
+        "system": "SWR"
+      },
+      "always_present": false,
+      "status": "LOCKED"
+    }
+  ]
+}

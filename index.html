@@ -6,6 +6,7 @@
 <title>INOVUES Estimator</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="calc.js"></script>
+<script src="preset.js"></script>
 <script>
   // Load material rules at page startup. Until they're loaded, qty estimates
   // fall back to the legacy heuristic — that's an intentional safe default.
@@ -13,6 +14,25 @@
     .then(r => r.json())
     .then(rules => { window.MATERIAL_RULES = rules; if (window.recalcMats) window.recalcMats(); })
     .catch(err => { console.warn('material_rules.json not loaded, using fallback heuristic:', err); });
+
+  // Load SWR preset rules. After rules load, fetch the matching Odoo products
+  // in ONE batch call so syncPresetFromTko() can add them instantly when the
+  // TKO changes — no per-add API latency.
+  fetch('preset_swr.json')
+    .then(r => r.json())
+    .then(data => {
+      window.PRESET_RULES = data.rules;
+      const codes = [...new Set(data.rules.map(r => r.odoo_default_code).filter(Boolean))];
+      return fetch('/api/products/by_codes?codes=' + encodeURIComponent(codes.join(',')))
+        .then(r => r.json())
+        .then(products => {
+          // Index products by default_code for fast lookup during preset sync
+          window.PRESET_PRODUCTS = {};
+          products.forEach(p => { if (p.ref) window.PRESET_PRODUCTS[p.ref] = p; });
+          if (window.syncPresetFromTko) window.syncPresetFromTko();
+        });
+    })
+    .catch(err => { console.warn('preset_swr.json not loaded, preset disabled:', err); });
 </script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap');
@@ -585,6 +605,9 @@ function getTotals() {
 
 // ── Materials ─────────────────────────────────────────────────────────────────
 let matRows = [], searchTimer = null;
+// Tracks preset items the user explicitly removed — prevents them from being
+// re-added by syncPresetFromTko() when TKO changes still match their conditions.
+const dismissedPresetCodes = new Set();
 
 document.getElementById('matSearch').addEventListener('input', function() { doSearch(this.value); });
 document.addEventListener('click', e => { if (!e.target.closest('.search-wrap')) document.getElementById('searchDD').classList.remove('open'); });
@@ -632,13 +655,22 @@ function addMaterial(p) {
   showToast('Added: '+p.name);
 }
 
-function removeMat(i) { matRows.splice(i,1); renderMaterials(); calcAll(); }
+function removeMat(i) {
+  // If the user removes a preset item, remember it so syncPresetFromTko() doesn't re-add it.
+  const m = matRows[i];
+  if (m && m.ref) dismissedPresetCodes.add(m.ref);
+  matRows.splice(i,1);
+  renderMaterials();
+  calcAll();
+}
 
 function estimateQty(p, t) {
   return CALC.estimateQty(p, t);
 }
 
 function recalcMats() {
+  // Sync preset before computing qtys, so newly-added preset items get qty computed in this pass.
+  syncPresetFromTko();
   const t = getTotals();
   matRows.forEach(m => {
     const v = CALC.qtyByRuleVerbose({name:m.name, ref:m.ref}, t);
@@ -649,6 +681,33 @@ function recalcMats() {
   renderMaterials();
 }
 window.recalcMats = recalcMats;  // expose so the async rules-loader can call it
+
+// Evaluate preset_swr.json rules against current TKO, add any matching items
+// to matRows that aren't already there and weren't user-dismissed. Never removes.
+function syncPresetFromTko() {
+  if (!window.PRESET_RULES || !window.PRESET_PRODUCTS || !window.PRESET) return;
+  const applicable = window.PRESET.buildPreset(window.PRESET_RULES, rows);
+  for (const rule of applicable) {
+    const code = rule.odoo_default_code;
+    if (!code) continue;
+    if (dismissedPresetCodes.has(code)) continue;     // user removed it; respect that
+    if (matRows.find(m => m.ref === code)) continue;  // already in list
+    const product = window.PRESET_PRODUCTS[code];
+    if (!product) continue;                            // product missing from Odoo response
+    matRows.push({
+      odooId: product.id,
+      name: product.name,
+      ref: product.ref,
+      supplier: product.category,
+      uom: product.uom,
+      onHand: product.onHand,
+      cost: product.cost,
+      calcQty: 0, ruleId: null, source: 'preset',
+      overQty: '', shipPct: 0,
+    });
+  }
+}
+window.syncPresetFromTko = syncPresetFromTko;  // expose so async preset loader can call it
 
 function getMatTotal() {
   return matRows.reduce((s,m) => {
