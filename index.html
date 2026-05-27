@@ -554,6 +554,9 @@ function updRow(id, field, val) {
   const r = rows.find(r => r.id === id);
   if (!r) return;
   r[field] = val;
+  // System=SWR-VIG forces glazing to VIG; re-render so the glazing dropdown
+  // lock (disabled when SWR-VIG) is applied or lifted immediately.
+  if (field === 'system') { renderTKO(); return; }
   renderSummary();
   recalcMats();
   calcAll();
@@ -564,7 +567,11 @@ function selFor(id, field, opts, val) {
 }
 
 function renderTKO() {
-  document.getElementById('tkoBody').innerHTML = rows.map((r,i) => `<tr>
+  document.getElementById('tkoBody').innerHTML = rows.map((r,i) => {
+    // Invariant: SWR-VIG system is always VIG-glazed (enforced here so it holds
+    // regardless of how the row got its system value: UI, import, or addRow).
+    if (r.system === 'SWR-VIG') r.glazing = 'VIG';
+    return `<tr>
     <td class="rn">${i+1}</td>
     <td><input type="text" value="${escQ(r.item)}" oninput="updRow(${r.id},'item',this.value)" style="min-width:85px"></td>
     <td><input type="number" value="${r.width}" step="0.25" min="0" oninput="updRow(${r.id},'width',+this.value)" style="width:68px"></td>
@@ -577,10 +584,13 @@ function renderTKO() {
     <td class="cb"><input type="checkbox" ${r.headRet?'checked':''} onchange="updRow(${r.id},'headRet',this.checked)"></td>
     <td class="cb"><input type="checkbox" ${r.sillRet?'checked':''} onchange="updRow(${r.id},'sillRet',this.checked)"></td>
     <td class="cb"><input type="checkbox" ${r.jambSp?'checked':''} onchange="updRow(${r.id},'jambSp',this.checked)"></td>
-    <td>${selFor(r.id,'glazing',GLAZINGS,r.glazing)}</td>
+    <td>${r.system === 'SWR-VIG'
+      ? `<select disabled title="Glazing locked to VIG for the SWR-VIG system"><option selected>VIG</option></select>`
+      : selFor(r.id,'glazing',GLAZINGS,r.glazing)}</td>
     <td><input type="number" value="${r.glazPrice}" step="0.5" min="0" oninput="updRow(${r.id},'glazPrice',+this.value)" style="width:52px"></td>
     <td><button class="btn-del" onclick="removeRow(${r.id})">✕</button></td>
-  </tr>`).join('');
+  </tr>`;
+  }).join('');
   renderSummary();
   recalcMats();
   calcAll();
@@ -612,6 +622,23 @@ const dismissedPresetCodes = new Set();
 document.getElementById('matSearch').addEventListener('input', function() { doSearch(this.value); });
 document.addEventListener('click', e => { if (!e.target.closest('.search-wrap')) document.getElementById('searchDD').classList.remove('open'); });
 
+// True when there's at least one active TKO row and every active row is VIG-glazed.
+// (SWR-VIG rows are forced to VIG, so they count.)
+function allActiveRowsVIG() {
+  const active = rows.filter(r => r.qty > 0 && r.width > 0 && r.height > 0);
+  return active.length > 0 && active.every(r => r.glazing === 'VIG');
+}
+
+// A product is non-VIG glass when its Odoo category leaf is "Glass" and neither
+// its name nor code contains "VIG". These are hidden from search when the whole
+// takeoff is VIG, so only VIG glass (e.g. Luxwall, Haan) remains selectable.
+function isNonVigGlass(p) {
+  const leaf = String(p.category || '').split('/').pop().trim().toLowerCase();
+  if (leaf !== 'glass') return false;
+  const hay = ((p.name || '') + ' ' + (p.ref || '')).toLowerCase();
+  return !hay.includes('vig');
+}
+
 function doSearch(q) {
   clearTimeout(searchTimer);
   const dd = document.getElementById('searchDD');
@@ -622,14 +649,16 @@ function doSearch(q) {
     try {
       const res = await fetch(`${API}/api/products/search?q=${encodeURIComponent(q)}`);
       const products = await res.json();
-      if (!products.length) { dd.innerHTML = '<div class="dd-loading">No products found.</div>'; return; }
-      dd.innerHTML = products.map((p,i) => `
+      // When the whole takeoff is VIG, hide non-VIG glass so only VIG glass shows.
+      const list = allActiveRowsVIG() ? products.filter(p => !isNonVigGlass(p)) : products;
+      if (!list.length) { dd.innerHTML = '<div class="dd-loading">No products found.</div>'; return; }
+      dd.innerHTML = list.map((p,i) => `
         <div class="dd-item" data-idx="${i}">
           <div><div class="dd-name">${esc(p.name)}</div><div class="dd-meta">${esc(p.ref||'—')} · ${esc(p.category)}</div></div>
           <div class="dd-stock ${p.onHand>0?'in-stock':'no-stock'}">${p.onHand>0?p.onHand+' '+p.uom:'0 on hand'}</div>
         </div>`).join('');
       // Store products on dd for click handler
-      dd._products = products;
+      dd._products = list;
       dd.querySelectorAll('.dd-item').forEach(el => {
         el.addEventListener('click', () => {
           addMaterial(dd._products[+el.dataset.idx]);
