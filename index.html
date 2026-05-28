@@ -262,6 +262,9 @@
     </div>
   </div>
 
+  <!-- Required Materials / Draft POs (Phase 4) — populated by renderRequiredMaterials() -->
+  <div class="card" id="reqMatPanel" style="display:none;border-left:4px solid var(--accent)"></div>
+
   <!-- Next page button -->
   <div style="display:flex;justify-content:flex-end;padding-bottom:32px">
     <button class="btn btn-primary" onclick="switchPage('page2', document.querySelectorAll('.tab')[1])">
@@ -676,11 +679,13 @@ function addMaterial(p) {
   const v = CALC.qtyByRuleVerbose(p, t);
   matRows.push({ odooId:p.id, name:p.name, ref:p.ref, supplier:p.category, uom:p.uom,
     calcQty:v.qty, ruleId:v.ruleId, source:v.source,
-    overQty:'', onHand:p.onHand, cost:p.cost, shipPct:5 });
+    overQty:'', onHand:p.onHand, cost:p.cost, shipPct:5,
+    vendorFetched:false, selected:true });
   document.getElementById('searchDD').classList.remove('open');
   document.getElementById('matSearch').value = '';
   renderMaterials();
   calcAll();
+  enrichVendors();
   showToast('Added: '+p.name);
 }
 
@@ -708,6 +713,7 @@ function recalcMats() {
     m.source = v.source;
   });
   renderMaterials();
+  enrichVendors();
 }
 window.recalcMats = recalcMats;  // expose so the async rules-loader can call it
 
@@ -732,7 +738,7 @@ function syncPresetFromTko() {
       onHand: product.onHand,
       cost: product.cost,
       calcQty: 0, ruleId: null, source: 'preset',
-      overQty: '', shipPct: 0,
+      overQty: '', shipPct: 0, vendorFetched:false, selected:true,
     });
   }
 }
@@ -745,12 +751,173 @@ function getMatTotal() {
   }, 0);
 }
 
+// Fetch preferred vendor + MOQ + price for any rows we haven't looked up yet,
+// in one batched call to /api/products/supplierinfo. Idempotent: rows are marked
+// vendorFetched so repeated calls no-op. Products with no vendor record get
+// sensible defaults (MOQ 1, vendor blank) so the panel can flag them.
+async function enrichVendors() {
+  const need = matRows.filter(m => !m.vendorFetched && m.odooId);
+  if (!need.length) return;
+  try {
+    const ids = need.map(m => m.odooId).join(',');
+    const res = await fetch(`${API}/api/products/supplierinfo?ids=${encodeURIComponent(ids)}`);
+    const data = await res.json();
+    matRows.forEach(m => {
+      if (m.vendorFetched || !m.odooId) return;
+      const si = data[String(m.odooId)];
+      if (si) {
+        m.vendor = si.vendor; m.vendorId = si.vendorId;
+        m.moq = si.moq; m.vendorPrice = si.price;
+        m.sku = si.sku; m.leadDays = si.leadDays;
+      } else {
+        m.vendor = ''; m.vendorId = null; m.moq = 1;
+        m.vendorPrice = m.cost || 0; m.sku = m.ref || ''; m.leadDays = 0;
+      }
+      m.vendorFetched = true;
+    });
+    renderMaterials();
+  } catch(e) { /* leave unfetched; panel will show "needs vendor" defaults */ }
+}
+window.enrichVendors = enrichVendors;
+
+// MOQ-adjusted order quantity (rule 3a): order the shortfall, but never less
+// than the vendor's MOQ. Returns 0 when nothing needs ordering.
+function orderQtyFor(m) {
+  const qty   = m.overQty!==''&&m.overQty>=0 ? +m.overQty : m.calcQty;
+  const delta = Math.max(0, qty - m.onHand);
+  if (delta <= 0) return 0;
+  const moq = (m.moq && m.moq > 0) ? m.moq : 1;
+  return delta <= moq ? moq : delta;
+}
+
+// Build the "Required Materials" panel: only rows needing order, grouped by
+// vendor, each with a checkbox. This is the selection Chunk C turns into POs.
+function renderRequiredMaterials() {
+  const panel = document.getElementById('reqMatPanel');
+  if (!panel) return;
+  const need = matRows.filter(m => {
+    const q = m.overQty!==''&&m.overQty>=0 ? +m.overQty : m.calcQty;
+    return q > m.onHand;
+  });
+  if (!need.length) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  need.forEach(m => { if (m.selected === undefined) m.selected = true; });
+
+  const groups = {};
+  need.forEach(m => {
+    const key = (m.vendorId != null) ? m.vendorId : 'novendor';
+    if (!groups[key]) groups[key] = { vendor: m.vendor || '⚠ Needs vendor', vendorId: m.vendorId, rows: [] };
+    groups[key].rows.push(m);
+  });
+
+  let html = `<div class="card-title" style="cursor:default">Required Materials — Draft Purchase Orders</div>
+    <p class="small-note">Lines that need ordering (To Order &gt; 0), grouped by vendor. Quantities apply each vendor's MOQ. Untick anything you don't want on a PO.</p>`;
+
+  Object.keys(groups).forEach(key => {
+    const g = groups[key];
+    const novendor = (g.vendorId == null);
+    let sub = 0;
+    const rowsHtml = g.rows.map(m => {
+      const idx   = matRows.indexOf(m);
+      const qty   = m.overQty!==''&&m.overQty>=0 ? +m.overQty : m.calcQty;
+      const delta = Math.max(0, qty - m.onHand);
+      const oq    = orderQtyFor(m);
+      const price = ((m.vendorPrice!=null)?m.vendorPrice:m.cost) || 0;
+      const lt    = oq*price;
+      if (m.selected) sub += lt;
+      const moqNote = (delta < oq)
+        ? ` <span style="color:var(--muted2);font-size:10px" title="Shortfall ${delta} is below MOQ ${m.moq} — rounded up">(MOQ ${m.moq})</span>` : '';
+      return `<tr style="${m.selected?'':'opacity:.4'}">
+        <td style="text-align:center"><input type="checkbox" ${m.selected?'checked':''}
+            onchange="matRows[${idx}].selected=this.checked;renderRequiredMaterials()"></td>
+        <td>${esc(m.name)}</td><td style="font-family:'DM Mono',monospace;font-size:11px">${esc(m.sku||m.ref||'—')}</td>
+        <td style="text-align:center">${delta}</td>
+        <td style="text-align:center;font-weight:700">${oq}${moqNote}</td>
+        <td style="text-align:right">$${fmt(price)}</td>
+        <td style="text-align:right">$${fmt(lt)}</td></tr>`;
+    }).join('');
+    html += `<div style="margin-top:14px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+      <div style="background:${novendor?'#fff4f4':'var(--surface2)'};padding:8px 12px;font-weight:700;font-family:'DM Sans',sans-serif;display:flex;justify-content:space-between;align-items:center">
+        <span>${esc(g.vendor)}</span><span style="font-family:'DM Mono',monospace">Subtotal: $${fmt(sub)}</span></div>
+      <table class="mat"><thead><tr>
+        <th style="width:34px"></th><th>Material</th><th>SKU</th><th>Need</th><th>Order Qty</th><th>Unit $</th><th>Line $</th>
+      </tr></thead><tbody>${rowsHtml}</tbody></table>
+      ${novendor ? '<div class="small-note" style="padding:6px 12px;color:var(--danger)">No vendor on these products — assign one in Odoo before a PO can be created.</div>' : ''}
+    </div>`;
+  });
+
+  // Footer: total of selected vendor-assigned lines + the action button.
+  const sel   = need.filter(m => m.selected && m.vendorId != null);
+  const grand = sel.reduce((s,m) => s + orderQtyFor(m)*(((m.vendorPrice!=null)?m.vendorPrice:m.cost)||0), 0);
+  const nVend = new Set(sel.map(m => m.vendorId)).size;
+  html += `<div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+    <div style="font-family:'DM Sans',sans-serif;font-weight:700">${sel.length} line(s) · ${nVend} vendor(s) · Total $${fmt(grand)}</div>
+    <button class="btn btn-primary" ${sel.length?'':'disabled'} onclick="createDraftPOs()">Create Draft PO(s) in Odoo</button>
+  </div>
+  <div id="poResult" style="margin-top:12px"></div>`;
+
+  panel.innerHTML = html;
+}
+window.renderRequiredMaterials = renderRequiredMaterials;
+
+// Group selected, vendor-assigned shortfall lines by vendor and POST them to
+// /api/po/create, which makes one DRAFT purchase.order per vendor in Odoo.
+// Confirms with the user before writing. Products with no vendor are excluded.
+async function createDraftPOs() {
+  const sel = matRows.filter(m => {
+    const q = m.overQty!==''&&m.overQty>=0 ? +m.overQty : m.calcQty;
+    return q > m.onHand && m.selected && m.vendorId != null;
+  });
+  if (!sel.length) { showToast('No vendor-assigned lines selected.','error'); return; }
+
+  const byVendor = {};
+  sel.forEach(m => {
+    const k = m.vendorId;
+    if (!byVendor[k]) byVendor[k] = { vendorId:m.vendorId, vendor:m.vendor||'', lines:[] };
+    byVendor[k].lines.push({
+      productId: m.odooId,
+      qty:       orderQtyFor(m),
+      price:     ((m.vendorPrice!=null)?m.vendorPrice:m.cost)||0,
+      name:      m.name + (m.sku ? (' ['+m.sku+']') : '')
+    });
+  });
+  const vendors = Object.values(byVendor);
+  const pname  = (document.getElementById('projectName')||{}).value || '';
+  const cust   = (document.getElementById('customer')||{}).value || '';
+  const origin = [pname, cust].filter(Boolean).join(' — ') || 'INOVUES Estimator';
+
+  if (!confirm(`Create ${vendors.length} draft purchase order(s) in Odoo for ${sel.length} line(s)?\n\nThey will be DRAFTS — not confirmed or sent.`)) return;
+
+  const out = document.getElementById('poResult');
+  if (out) out.innerHTML = '<div class="small-note">Creating draft POs in Odoo…</div>';
+  try {
+    const res = await fetch(`${API}/api/po/create`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ origin, vendors })
+    });
+    const data = await res.json();
+    const ok  = (data.created||[]).filter(r => r.poName);
+    const err = (data.created||[]).filter(r => r.error);
+    let h = '';
+    if (ok.length) h += `<div style="color:var(--success);font-weight:700;font-family:'DM Sans',sans-serif">✅ Created ${ok.length} draft PO(s):</div>`
+      + ok.map(r => `<div class="small-note" style="margin:2px 0">• ${esc(r.vendor)} → <b>${esc(r.poName)}</b> (${r.lines} line${r.lines>1?'s':''})</div>`).join('');
+    if (err.length) h += err.map(r => `<div class="small-note" style="color:var(--danger)">✕ ${esc(r.vendor)}: ${esc(r.error)}</div>`).join('');
+    if ((data.skipped||[]).length) h += `<div class="small-note" style="color:var(--muted2)">Skipped (no vendor): ${data.skipped.map(esc).join(', ')}</div>`;
+    if (out) out.innerHTML = h || '<div class="small-note">No POs created.</div>';
+    if (ok.length) showToast(`Created ${ok.length} draft PO(s) in Odoo`);
+  } catch(e) {
+    if (out) out.innerHTML = '<div class="small-note" style="color:var(--danger)">Error creating POs — check the Odoo connection.</div>';
+  }
+}
+window.createDraftPOs = createDraftPOs;
+
 function renderMaterials() {
   const tbody = document.getElementById('matBody');
   if (!matRows.length) {
     tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;padding:20px;color:var(--muted);font-family:'DM Sans',sans-serif">Search and add materials above.</td></tr>`;
     document.getElementById('matFoot').innerHTML = '';
     document.getElementById('matInfo').style.display = 'none';
+    const _rp = document.getElementById('reqMatPanel'); if (_rp) _rp.style.display = 'none';
     return;
   }
   let totalCost = 0;
@@ -793,6 +960,7 @@ function renderMaterials() {
   const info = document.getElementById('matInfo');
   info.style.display = 'block';
   info.textContent = needOrder>0 ? `⚠ ${needOrder} material(s) need to be ordered.` : '✅ All materials available in stock.';
+  renderRequiredMaterials();
 }
 
 // ── Equipment lines ───────────────────────────────────────────────────────────
